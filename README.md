@@ -6,10 +6,12 @@ producing a report such as:
 
 ```
 [~]$ compsize /usr/share
-90320 files.
-all   79%  1.4G/ 1.8G
-none       1.0G
-lzo   53%  446M/ 833M
+Processed 120101 files.
+Type       Perc     Disk Usage   Total Usage
+Data        58%      1.1G         1.9G
+none       100%      351M         351M
+zlib        29%       41M         137M
+lzo         51%      776M         1.4G
 ```
 
 A directory has no extents but has a (recursive) list of files.  A
