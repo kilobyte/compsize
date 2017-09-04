@@ -48,7 +48,9 @@ static const char *comp_types[256] = { "none", "zlib", "lzo", "zstd" };
 
 static void do_file(const char *filename)
 {
-    int fd = open(filename, O_RDONLY);
+    int fd = open(filename, O_RDONLY|O_NOFOLLOW);
+    if (fd == -1 && errno == ELOOP)
+        return;
     if (fd == -1)
         die("open(\"%s\"): %m\n", filename);
     printf("%s\n", filename);
