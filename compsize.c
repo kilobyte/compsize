@@ -33,8 +33,10 @@ struct workspace
 {
         uint64_t disk[MAX_ENTRIES];
         uint64_t uncomp[MAX_ENTRIES];
+        uint64_t refd[MAX_ENTRIES];
         uint64_t disk_all;
         uint64_t uncomp_all;
+        uint64_t refd_all;
         uint64_t nfiles;
         struct radix_tree_root seen_extents;
 };
@@ -156,6 +158,7 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
             */
             uint64_t len = get_u64(bp+29);
             uint64_t disk_bytenr = get_u64(bp+21);
+            uint64_t num_bytes = get_u64(bp+45);
             DPRINTF("regular: ram_bytes=%lu compression=%u len=%lu disk_bytenr=%lu\n",
                      ram_bytes, compression, len, disk_bytenr);
             radix_tree_preload(GFP_KERNEL);
@@ -163,6 +166,7 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
             {
                 ws->disk[compression] += len;
                 ws->uncomp[compression] += ram_bytes;
+                ws->refd[compression] += num_bytes;
             }
             radix_tree_preload_end();
         }
@@ -173,6 +177,7 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
                  ram_bytes, compression, len);
             ws->disk[compression] += len;
             ws->uncomp[compression] += ram_bytes;
+            ws->refd[compression] += ram_bytes;
         }
         bp += hlen;
     }
@@ -246,14 +251,19 @@ static void human_bytes(uint64_t x, char *output)
         snprintf(output, 12, "%4lu%c", x, units[u]);
 }
 
-static void print_table(const char *type, const char *percentage, const char *disk_usage, const char *uncomp_usage)
+static void print_table(const char *type,
+                        const char *percentage,
+                        const char *disk_usage,
+                        const char *uncomp_usage,
+                        const char *refd_usage)
 {
-        printf("%-10s %-8s %-12s %-12s\n", type, percentage, disk_usage, uncomp_usage);
+        printf("%-10s %-8s %-12s %-12s %-12s\n", type, percentage,
+               disk_usage, uncomp_usage, refd_usage);
 }
 
 int main(int argc, const char **argv)
 {
-    char perc[8], disk_usage[12], uncomp_usage[12];
+    char perc[8], disk_usage[12], uncomp_usage[12], refd_usage[12];
     struct workspace *ws;
     uint32_t percentage;
 
@@ -274,7 +284,8 @@ int main(int argc, const char **argv)
     for (int t=0; t<MAX_ENTRIES; t++)
     {
             ws->uncomp_all += ws->uncomp[t];
-            ws->disk_all  += ws->disk[t];
+            ws->disk_all   += ws->disk[t];
+            ws->refd_all   += ws->refd[t];
     }
 
     if (!ws->uncomp_all)
@@ -286,12 +297,12 @@ int main(int argc, const char **argv)
     if (ws->nfiles > 1)
         printf("Processed %lu files.\n", ws->nfiles);
 
-    print_table("Type", "Perc", "Disk Usage", "Uncompressed");
+    print_table("Type", "Perc", "Disk Usage", "Uncompressed", "Referenced");
     percentage = ws->disk_all*100/ws->uncomp_all;
     snprintf(perc, 16, "%3u%%", percentage);
     human_bytes(ws->disk_all, disk_usage);
     human_bytes(ws->uncomp_all, uncomp_usage);
-    print_table("Data", perc, disk_usage, uncomp_usage);
+    print_table("Data", perc, disk_usage, uncomp_usage, refd_usage);
 
     for (int t=0; t<MAX_ENTRIES; t++)
     {
@@ -302,7 +313,8 @@ int main(int argc, const char **argv)
         snprintf(perc, 8, "%3u%%", percentage);
         human_bytes(ws->disk[t], disk_usage);
         human_bytes(ws->uncomp[t], uncomp_usage);
-        print_table(ct?ct:"?????", perc, disk_usage, uncomp_usage);
+        human_bytes(ws->refd[t], refd_usage);
+        print_table(ct?ct:"?????", perc, disk_usage, uncomp_usage, refd_usage);
     }
 
     free(ws);
