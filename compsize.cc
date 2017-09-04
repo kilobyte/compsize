@@ -9,6 +9,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
+#include <stdio.h>
 #include <inttypes.h>
 #include <set>
 #include "endianness.h"
@@ -183,26 +184,25 @@ static void do_file(const char *filename)
     close(fd);
 }
 
-static void print_bytes(uint64_t x)
+static void human_bytes(uint64_t x, char *output)
 {
     static const char *units = "BKMGTPE";
     int u = 0;
     while (x >= 10240)
         u++, x>>=10;
     if (x >= 1024)
-        printf(" %lu.%lu%c", x>>10, x*10/1024%10, units[u+1]);
+        snprintf(output, 16, " %lu.%lu%c", x>>10, x*10/1024%10, units[u+1]);
     else
-        printf("%4lu%c", x, units[u]);
-    
+        snprintf(output, 16, "%4lu%c", x, units[u]);
 }
 
 static void print_stats(const char *type, uint64_t d, uint64_t t)
 {
-    printf("%-4s %3lu%% ", type, d*100/t);
-    print_bytes(d);
-    printf("/");
-    print_bytes(t);
-    printf("\n");
+    char disk_usage[16], total_usage[16];
+    uint32_t percentage = d*100/t;
+    human_bytes(d, disk_usage);
+    human_bytes(t, total_usage);
+    printf("%-4s %3u%% %-4s/%-4s\n", type, percentage, disk_usage, total_usage);
 }
 
 int main(int argc, const char **argv)
