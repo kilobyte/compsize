@@ -43,7 +43,7 @@ static uint64_t get_u64(const uint8_t *mem)
 }
 
 static std::set<uint64_t> seen_extents;
-static uint64_t disk[256], total[256], disk_all, total_all;
+static uint64_t disk[256], total[256], disk_all, total_all, nfiles;
 static const char *comp_types[256] = { "none", "zlib", "lzo", "zstd" };
 
 static void do_file(const char *filename)
@@ -82,6 +82,7 @@ static void do_file(const char *filename)
         return;
     }
     //printf("inode = %" PRIu64"\n", st.st_ino);
+    nfiles++;
 
     ino_args.treeid   = 0;
     ino_args.objectid = BTRFS_FIRST_FREE_OBJECTID;
@@ -188,7 +189,7 @@ int main(int argc, const char **argv)
 {
     for (int i=0; i<256; i++)
         disk[i]=0, total[i]=0;
-    disk_all = total_all = 0;
+    disk_all = total_all = nfiles = 0;
 
     if (argc <= 1)
     {
@@ -205,6 +206,8 @@ int main(int argc, const char **argv)
         return 1;
     }
 
+    if (nfiles > 1)
+        printf("%lu files.\n", nfiles);
     print_stats("all", disk_all, total_all);
     for (int t=0; t<256; t++)
     {
