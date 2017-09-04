@@ -205,9 +205,9 @@ static void human_bytes(uint64_t x, char *output)
     while (x >= 10240)
         u++, x>>=10;
     if (x >= 1024)
-        snprintf(output, 16, " %lu.%lu%c", x>>10, x*10/1024%10, units[u+1]);
+        snprintf(output, 12, " %lu.%lu%c", x>>10, x*10/1024%10, units[u+1]);
     else
-        snprintf(output, 16, "%4lu%c", x, units[u]);
+        snprintf(output, 12, "%4lu%c", x, units[u]);
 }
 
 static void print_table(const char *type, const char *percentage, const char *disk_usage, const char *total_usage)
