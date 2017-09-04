@@ -1,13 +1,13 @@
 all: compsize
 PREFIX ?= /
-CXX=c++
-CXXFLAGS ?= "-Wall"
+CC ?= gcc
+CFLAGS ?= "-Wall"
 
 debug: CXXFLAGS += -DDEBUG -g
 debug: compsize
 
-compsize: compsize.cc
-	$(CXX) $(CXXFLAGS) -o $@ $^
+compsize: compsize.c radix-tree.c
+	$(CC) $(CFLAGS) -o $@ $^
 
 clean:
 	rm -f compsize

@@ -1,3 +1,7 @@
+// For asprintf()
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -9,11 +13,9 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
-#include <stdio.h>
 #include <inttypes.h>
-#include <set>
 #include "endianness.h"
-
+#include "radix-tree.h"
 
 #if defined(DEBUG)
     #define DPRINTF(fmt, args...) fprintf(stderr, fmt, ##args)
@@ -56,7 +58,6 @@ static uint64_t get_u32(const void *mem)
     return htole32(bad_endian);
 }
 
-static std::set<uint64_t> seen_extents;
 static struct
 {
         uint64_t disk[MAX_ENTRIES];
@@ -64,6 +65,7 @@ static struct
         uint64_t disk_all;
         uint64_t total_all;
         uint64_t nfiles;
+        struct radix_tree_root seen_extents;
 } workspace;
 
 static const char *comp_types[MAX_ENTRIES] = { "none", "zlib", "lzo", "zstd" };
@@ -139,15 +141,16 @@ static void do_file(int fd, struct stat st)
                 uint64_t disk_bytenr = get_u64(bp+21);
                 DPRINTF("regular: ram_bytes=%lu compression=%u len=%lu disk_bytenr=%lu\n",
                          ram_bytes, compression, len, disk_bytenr);
-                if (!seen_extents.count(disk_bytenr))
+
+                radix_tree_preload(GFP_KERNEL);
+                if (radix_tree_insert(&workspace.seen_extents, disk_bytenr, (void *)disk_bytenr) == 0)
                 {
-                    // count every extent only once
-                    seen_extents.insert(disk_bytenr);
                     workspace.disk[compression] += len;
                     workspace.total[compression] += ram_bytes;
                     workspace.disk_all += len;
                     workspace.total_all += ram_bytes;
                 }
+                radix_tree_preload_end();
             }
             else
             {
@@ -186,10 +189,11 @@ static void do_recursive_search(const char *path)
 
         if ((st.st_mode & S_IFMT) == S_IFDIR)
         {
+            struct dirent *de;
             dir = fdopendir(fd);
             if (!dir)
                 die("opendir(\"%s\"): %m\n", path);
-            while (struct dirent *de = readdir(dir))
+            while ((de = readdir(dir)))
             {
                 if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, ".."))
                     continue;
@@ -242,6 +246,8 @@ int main(int argc, const char **argv)
     }
 
     memset(&workspace, 0, sizeof(workspace));
+
+    INIT_RADIX_TREE(&workspace.seen_extents, 0);
 
     for (; argv[1]; argv++)
         do_recursive_search(argv[1]);
