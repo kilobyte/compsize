@@ -11,7 +11,6 @@
 #include <sys/ioctl.h>
 #include <inttypes.h>
 #include <set>
-#include <map>
 #include "endianness.h"
 
 #define DPRINTF(...) do;while(0)
