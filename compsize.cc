@@ -14,6 +14,8 @@
 #include <map>
 #include "endianness.h"
 
+#define DPRINTF(...) do;while(0)
+
 static void die(const char *txt, ...) __attribute__((format (printf, 1, 2)));
 static void die(const char *txt, ...)
 {
@@ -53,7 +55,7 @@ static void do_file(const char *filename)
         return;
     if (fd == -1)
         die("open(\"%s\"): %m\n", filename);
-    printf("%s\n", filename);
+    DPRINTF("%s\n", filename);
     struct stat st;
     if (fstat(fd, &st))
         die("stat(\"%s\"): %m\n", filename);
@@ -81,14 +83,14 @@ static void do_file(const char *filename)
         close(fd);
         return;
     }
-    //printf("inode = %" PRIu64"\n", st.st_ino);
+    DPRINTF("inode = %" PRIu64"\n", st.st_ino);
     nfiles++;
 
     ino_args.treeid   = 0;
     ino_args.objectid = BTRFS_FIRST_FREE_OBJECTID;
     if (ioctl(fd, BTRFS_IOC_INO_LOOKUP, &ino_args))
         die("INO_LOOKUP: %m\n");
-    //printf("tree = %llu\n", ino_args.treeid);
+    DPRINTF("tree = %llu\n", ino_args.treeid);
 
     memset(&sv2_args.key, 0, sizeof(sv2_args.key));
     sv2_args.key.tree_id = ino_args.treeid;
@@ -102,14 +104,14 @@ static void do_file(const char *filename)
 
     if (ioctl(fd, BTRFS_IOC_TREE_SEARCH_V2, &sv2_args))
         die("SEARCH_V2: %m\n");
-    //printf("nr_items = %u\n", sv2_args.key.nr_items);
+    DPRINTF("nr_items = %u\n", sv2_args.key.nr_items);
 
     uint8_t *bp = sv2_args.buf;
     while (sv2_args.key.nr_items--)
     {
         struct btrfs_ioctl_search_header *head = (struct btrfs_ioctl_search_header*)bp;
-        //printf("{ transid=%llu objectid=%llu offset=%llu type=%u len=%u }\n",
-        //  head->transid, head->objectid, head->offset, head->type, head->len);
+        DPRINTF("{ transid=%llu objectid=%llu offset=%llu type=%u len=%u }\n",
+         /  head->transid, head->objectid, head->offset, head->type, head->len);
         bp += sizeof(struct btrfs_ioctl_search_header);
 /*
         printf("\e[0;30;1m");
@@ -123,7 +125,7 @@ static void do_file(const char *filename)
 */
         if (head->type == BTRFS_EXTENT_DATA_KEY)
         {
-            //printf("len=%u\n", head->len);
+            DPRINTF("len=%u\n", head->len);
             // generation [8]
             uint64_t ram_bytes = get_u64(bp+8);
             uint8_t compression = bp[16];
@@ -134,8 +136,8 @@ static void do_file(const char *filename)
             {
                 uint64_t len = get_u64(bp+29);
                 uint64_t disk_bytenr = get_u64(bp+21);
-                //printf("regular: ram_bytes=%lu compression=%u len=%lu disk_bytenr=%lu\n",
-                //       ram_bytes, compression, len, disk_bytenr);
+                DPRINTF("regular: ram_bytes=%lu compression=%u len=%lu disk_bytenr=%lu\n",
+                         ram_bytes, compression, len, disk_bytenr);
                 if (!seen_extents.count(disk_bytenr))
                 {
                     // count every extent only once
@@ -149,8 +151,8 @@ static void do_file(const char *filename)
             else
             {
                 uint64_t len = head->len-21;
-                //printf("inline: ram_bytes=%lu compression=%u len=%u\n",
-                //       ram_bytes, compression, len);
+                DPRINTF("inline: ram_bytes=%lu compression=%u len=%u\n",
+                         ram_bytes, compression, len);
                 disk[compression] += len;
                 total[compression] += ram_bytes;
                 disk_all += len;
