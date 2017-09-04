@@ -15,6 +15,7 @@
 #include "endianness.h"
 
 #define DPRINTF(...) do;while(0)
+#define MAX_ENTRIES 256
 
 static void die(const char *txt, ...) __attribute__((format (printf, 1, 2)));
 static void die(const char *txt, ...)
@@ -32,7 +33,7 @@ static struct
 {
     struct btrfs_ioctl_search_key key;
     uint64_t buf_size;
-    uint8_t buf[16777216]; // hardcoded kernel's limit
+    uint8_t  buf[SZ_16M]; // hardcoded kernel's limit
 } sv2_args;
 
 static uint64_t get_u64(const void *mem)
@@ -50,8 +51,8 @@ static uint64_t get_u32(const void *mem)
 }
 
 static std::set<uint64_t> seen_extents;
-static uint64_t disk[256], total[256], disk_all, total_all, nfiles;
-static const char *comp_types[256] = { "none", "zlib", "lzo", "zstd" };
+static uint64_t disk[MAX_ENTRIES], total[MAX_ENTRIES], disk_all, total_all, nfiles;
+static const char *comp_types[MAX_ENTRIES] = { "none", "zlib", "lzo", "zstd" };
 
 static void do_file(const char *filename)
 {
@@ -206,7 +207,7 @@ int main(int argc, const char **argv)
     char perc[8], disk_usage[12], total_usage[12];
     uint32_t percentage;
 
-    for (int i=0; i<256; i++)
+    for (int i=0; i<MAX_ENTRIES; i++)
         disk[i]=0, total[i]=0;
     disk_all = total_all = nfiles = 0;
 
@@ -235,7 +236,7 @@ int main(int argc, const char **argv)
     human_bytes(total_all, total_usage);
     print_table("Data", perc, disk_usage, total_usage);
 
-    for (int t=0; t<256; t++)
+    for (int t=0; t<MAX_ENTRIES; t++)
     {
         if (!total[t])
             continue;
