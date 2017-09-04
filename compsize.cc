@@ -37,11 +37,18 @@ static struct
     uint8_t buf[16777216]; // hardcoded kernel's limit
 } sv2_args;
 
-static uint64_t get_u64(const uint8_t *mem)
+static uint64_t get_u64(const void *mem)
 {
     typedef struct __attribute__((__packed__)) { uint64_t v; } u64_unal;
     uint64_t bad_endian = ((u64_unal*)mem)->v;
     return htole64(bad_endian);
+}
+
+static uint64_t get_u32(const void *mem)
+{
+    typedef struct __attribute__((__packed__)) { uint32_t v; } u32_unal;
+    uint32_t bad_endian = ((u32_unal*)mem)->v;
+    return htole32(bad_endian);
 }
 
 static std::set<uint64_t> seen_extents;
@@ -110,12 +117,14 @@ static void do_file(const char *filename)
     while (sv2_args.key.nr_items--)
     {
         struct btrfs_ioctl_search_header *head = (struct btrfs_ioctl_search_header*)bp;
+        uint32_t hlen = get_u32(&head->len);
         DPRINTF("{ transid=%llu objectid=%llu offset=%llu type=%u len=%u }\n",
-         /  head->transid, head->objectid, head->offset, head->type, head->len);
+                get_u32(&head->transid), get_u32(&head->objectid), get_u32(&head->offset),
+                head->type, hlen);
         bp += sizeof(struct btrfs_ioctl_search_header);
 /*
         printf("\e[0;30;1m");
-        for (uint32_t i = 0; i < head->len; i++)
+        for (uint32_t i = 0; i < hlen; i++)
         {
             printf("%02x", bp[i]);
             if (i%8==7)
@@ -125,7 +134,7 @@ static void do_file(const char *filename)
 */
         if (head->type == BTRFS_EXTENT_DATA_KEY)
         {
-            DPRINTF("len=%u\n", head->len);
+            DPRINTF("len=%u\n", hlen);
             // generation [8]
             uint64_t ram_bytes = get_u64(bp+8);
             uint8_t compression = bp[16];
@@ -150,7 +159,7 @@ static void do_file(const char *filename)
             }
             else
             {
-                uint64_t len = head->len-21;
+                uint64_t len = hlen-21;
                 DPRINTF("inline: ram_bytes=%lu compression=%u len=%u\n",
                          ram_bytes, compression, len);
                 disk[compression] += len;
@@ -159,7 +168,7 @@ static void do_file(const char *filename)
                 total_all += ram_bytes;
             }
         }
-        bp += head->len;
+        bp += hlen;
     }
 
     close(fd);
