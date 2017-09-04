@@ -132,14 +132,26 @@ static void do_file(const char *filename)
         if (head->type == BTRFS_EXTENT_DATA_KEY)
         {
             DPRINTF("len=%u\n", hlen);
-            // generation [8]
+            /*
+                u64 generation
+                u64 ram_bytes
+                u8  compression
+                u8  encryption
+                u16 unused
+                u8  type
+            */
             uint64_t ram_bytes = get_u64(bp+8);
             uint8_t compression = bp[16];
-            // encryption [1]
-            // unused [2]
             uint8_t type = bp[20];
             if (type)
             {
+                /*
+                    ...
+                    u64 disk_bytenr
+                    u64 disk_num_bytes
+                    u64 offset
+                    u64 num_bytes
+                */
                 uint64_t len = get_u64(bp+29);
                 uint64_t disk_bytenr = get_u64(bp+21);
                 DPRINTF("regular: ram_bytes=%lu compression=%u len=%lu disk_bytenr=%lu\n",
