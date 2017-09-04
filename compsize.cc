@@ -57,13 +57,21 @@ static uint64_t get_u32(const void *mem)
 }
 
 static std::set<uint64_t> seen_extents;
-static uint64_t disk[MAX_ENTRIES], total[MAX_ENTRIES], disk_all, total_all, nfiles;
+static struct
+{
+        uint64_t disk[MAX_ENTRIES];
+        uint64_t total[MAX_ENTRIES];
+        uint64_t disk_all;
+        uint64_t total_all;
+        uint64_t nfiles;
+} workspace;
+
 static const char *comp_types[MAX_ENTRIES] = { "none", "zlib", "lzo", "zstd" };
 
 static void do_file(int fd, struct stat st)
 {
     DPRINTF("inode = %" PRIu64"\n", st.st_ino);
-    nfiles++;
+    workspace.nfiles++;
 
     ino_args.treeid   = 0;
     ino_args.objectid = BTRFS_FIRST_FREE_OBJECTID;
@@ -135,10 +143,10 @@ static void do_file(int fd, struct stat st)
                 {
                     // count every extent only once
                     seen_extents.insert(disk_bytenr);
-                    disk[compression] += len;
-                    total[compression] += ram_bytes;
-                    disk_all += len;
-                    total_all += ram_bytes;
+                    workspace.disk[compression] += len;
+                    workspace.total[compression] += ram_bytes;
+                    workspace.disk_all += len;
+                    workspace.total_all += ram_bytes;
                 }
             }
             else
@@ -146,10 +154,10 @@ static void do_file(int fd, struct stat st)
                 uint64_t len = hlen-21;
                 DPRINTF("inline: ram_bytes=%lu compression=%u len=%lu\n",
                          ram_bytes, compression, len);
-                disk[compression] += len;
-                total[compression] += ram_bytes;
-                disk_all += len;
-                total_all += ram_bytes;
+                workspace.disk[compression] += len;
+                workspace.total[compression] += ram_bytes;
+                workspace.disk_all += len;
+                workspace.total_all += ram_bytes;
             }
         }
         bp += hlen;
@@ -227,44 +235,42 @@ int main(int argc, const char **argv)
     char perc[8], disk_usage[12], total_usage[12];
     uint32_t percentage;
 
-    for (int i=0; i<MAX_ENTRIES; i++)
-        disk[i]=0, total[i]=0;
-    disk_all = total_all = nfiles = 0;
-
     if (argc <= 1)
     {
         fprintf(stderr, "Usage: compsize file-or-dir1 [file-or-dir2 ...]\n");
         return 1;
     }
 
+    memset(&workspace, 0, sizeof(workspace));
+
     for (; argv[1]; argv++)
         do_recursive_search(argv[1]);
 
-    if (!total_all)
+    if (!workspace.total_all)
     {
         fprintf(stderr, "No files.\n");
         return 1;
     }
 
-    if (nfiles > 1)
-        printf("Processed %lu files.\n", nfiles);
+    if (workspace.nfiles > 1)
+        printf("Processed %lu files.\n", workspace.nfiles);
 
     print_table("Type", "Perc", "Disk Usage", "Total Usage");
-    percentage = disk_all*100/total_all;
+    percentage = workspace.disk_all*100/workspace.total_all;
     snprintf(perc, 16, "%3u%%", percentage);
-    human_bytes(disk_all, disk_usage);
-    human_bytes(total_all, total_usage);
+    human_bytes(workspace.disk_all, disk_usage);
+    human_bytes(workspace.total_all, total_usage);
     print_table("Data", perc, disk_usage, total_usage);
 
     for (int t=0; t<MAX_ENTRIES; t++)
     {
-        if (!total[t])
+        if (!workspace.total[t])
             continue;
         const char *ct = comp_types[t];
-        percentage = disk[t]*100/total[t];
+        percentage = workspace.disk[t]*100/workspace.total[t];
         snprintf(perc, 8, "%3u%%", percentage);
-        human_bytes(disk[t], disk_usage);
-        human_bytes(total[t], total_usage);
+        human_bytes(workspace.disk[t], disk_usage);
+        human_bytes(workspace.total[t], total_usage);
         print_table(ct?ct:"?????", perc, disk_usage, total_usage);
     }
 
