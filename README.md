@@ -21,3 +21,5 @@ use only a few bytes of a 1GB extent or reflink it a thousand times.  Thus,
 the apparent size will not match the number given by **tar** or **du**.  On
 the other hand, the space _used_ should be accurate (although obviously it
 can be shared with files outside our set).
+
+The ioctl used requires root.
