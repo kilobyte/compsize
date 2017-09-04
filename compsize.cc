@@ -14,7 +14,13 @@
 #include <set>
 #include "endianness.h"
 
-#define DPRINTF(...) do;while(0)
+
+#if defined(DEBUG)
+    #define DPRINTF(fmt, args...) fprintf(stderr, fmt, ##args)
+#else
+    #define DPRINTF(fmt, args...)
+#endif
+
 #define MAX_ENTRIES 256
 
 static void die(const char *txt, ...) __attribute__((format (printf, 1, 2)));
@@ -56,13 +62,20 @@ static const char *comp_types[MAX_ENTRIES] = { "none", "zlib", "lzo", "zstd" };
 
 static void do_file(const char *filename)
 {
-    int fd = open(filename, O_RDONLY|O_NOFOLLOW|O_NOCTTY);
-    if (fd == -1 && errno == ELOOP)
-        return;
-    if (fd == -1)
-        die("open(\"%s\"): %m\n", filename);
-    DPRINTF("%s\n", filename);
+    int fd;
     struct stat st;
+
+    fd = open(filename, O_RDONLY|O_NOFOLLOW|O_NOCTTY);
+    if (fd == -1)
+    {
+        if (errno == ELOOP)
+            return;
+        else
+            die("open(\"%s\"): %m\n", filename);
+    }
+
+    DPRINTF("%s\n", filename);
+
     if (fstat(fd, &st))
         die("stat(\"%s\"): %m\n", filename);
 
@@ -117,7 +130,7 @@ static void do_file(const char *filename)
     {
         struct btrfs_ioctl_search_header *head = (struct btrfs_ioctl_search_header*)bp;
         uint32_t hlen = get_u32(&head->len);
-        DPRINTF("{ transid=%llu objectid=%llu offset=%llu type=%u len=%u }\n",
+        DPRINTF("{ transid=%lu objectid=%lu offset=%lu type=%u len=%u }\n",
                 get_u32(&head->transid), get_u32(&head->objectid), get_u32(&head->offset),
                 head->type, hlen);
         bp += sizeof(struct btrfs_ioctl_search_header);
@@ -171,7 +184,7 @@ static void do_file(const char *filename)
             else
             {
                 uint64_t len = hlen-21;
-                DPRINTF("inline: ram_bytes=%lu compression=%u len=%u\n",
+                DPRINTF("inline: ram_bytes=%lu compression=%u len=%lu\n",
                          ram_bytes, compression, len);
                 disk[compression] += len;
                 total[compression] += ram_bytes;
