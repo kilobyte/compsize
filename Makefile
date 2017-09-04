@@ -1,4 +1,8 @@
 all: compsize
+CXX=c++
 
 compsize: compsize.cc
-	g++ -Wall -Werror -o $@ $^ -ggdb
+	$(CXX) -Wall -o $@ $^
+
+clean:
+	rm -f compsize
