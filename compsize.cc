@@ -60,48 +60,8 @@ static std::set<uint64_t> seen_extents;
 static uint64_t disk[MAX_ENTRIES], total[MAX_ENTRIES], disk_all, total_all, nfiles;
 static const char *comp_types[MAX_ENTRIES] = { "none", "zlib", "lzo", "zstd" };
 
-static void do_file(const char *filename)
+static void do_file(int fd, struct stat st)
 {
-    int fd;
-    struct stat st;
-
-    fd = open(filename, O_RDONLY|O_NOFOLLOW|O_NOCTTY);
-    if (fd == -1)
-    {
-        if (errno == ELOOP)
-            return;
-        else
-            die("open(\"%s\"): %m\n", filename);
-    }
-
-    DPRINTF("%s\n", filename);
-
-    if (fstat(fd, &st))
-        die("stat(\"%s\"): %m\n", filename);
-
-    if ((st.st_mode & S_IFMT) == S_IFDIR)
-    {
-        DIR *dir = fdopendir(fd);
-        if (!dir)
-            die("opendir(\"%s\"): %m\n", filename);
-        while (struct dirent *de = readdir(dir))
-        {
-            if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, ".."))
-                continue;
-            char *fn;
-            if (asprintf(&fn, "%s/%s", filename, de->d_name) == -1)
-                die("Out of memory.\n");
-            do_file(fn);
-            free(fn);
-        }
-        closedir(dir);
-    }
-
-    if ((st.st_mode & S_IFMT) != S_IFREG)
-    {
-        close(fd);
-        return;
-    }
     DPRINTF("inode = %" PRIu64"\n", st.st_ino);
     nfiles++;
 
@@ -194,8 +154,55 @@ static void do_file(const char *filename)
         }
         bp += hlen;
     }
+}
 
-    close(fd);
+static void do_recursive_search(const char *path)
+{
+        int fd;
+        DIR *dir;
+        struct stat st;
+
+        fd = open(path, O_RDONLY|O_NOFOLLOW|O_NOCTTY);
+        if (fd == -1)
+        {
+            if (errno == ELOOP)
+                return;
+            else
+                die("open(\"%s\"): %m\n", path);
+        }
+
+        DPRINTF("%s\n", path);
+
+        if (fstat(fd, &st))
+            die("stat(\"%s\"): %m\n", path);
+
+        if ((st.st_mode & S_IFMT) == S_IFDIR)
+        {
+            dir = fdopendir(fd);
+            if (!dir)
+                die("opendir(\"%s\"): %m\n", path);
+            while (struct dirent *de = readdir(dir))
+            {
+                if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, ".."))
+                    continue;
+                char *fn;
+                if (asprintf(&fn, "%s/%s", path, de->d_name) == -1)
+                    die("Out of memory.\n");
+                do_recursive_search(fn);
+                free(fn);
+            }
+            closedir(dir);
+        }
+
+        if ((st.st_mode & S_IFMT) != S_IFREG)
+        {
+            close(fd);
+            return;
+        }
+
+        do_file(fd, st);
+
+        close(fd);
 }
 
 static void human_bytes(uint64_t x, char *output)
@@ -231,7 +238,7 @@ int main(int argc, const char **argv)
     }
 
     for (; argv[1]; argv++)
-        do_file(argv[1]);
+        do_recursive_search(argv[1]);
 
     if (!total_all)
     {
