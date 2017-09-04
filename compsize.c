@@ -32,9 +32,9 @@ struct btrfs_sv2_args
 struct workspace
 {
         uint64_t disk[MAX_ENTRIES];
-        uint64_t total[MAX_ENTRIES];
+        uint64_t uncomp[MAX_ENTRIES];
         uint64_t disk_all;
-        uint64_t total_all;
+        uint64_t uncomp_all;
         uint64_t nfiles;
         struct radix_tree_root seen_extents;
 };
@@ -162,7 +162,7 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
             if (radix_tree_insert(&ws->seen_extents, disk_bytenr, (void *)disk_bytenr) == 0)
             {
                 ws->disk[compression] += len;
-                ws->total[compression] += ram_bytes;
+                ws->uncomp[compression] += ram_bytes;
             }
             radix_tree_preload_end();
         }
@@ -172,7 +172,7 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
             DPRINTF("inline: ram_bytes=%lu compression=%u len=%lu\n",
                  ram_bytes, compression, len);
             ws->disk[compression] += len;
-            ws->total[compression] += ram_bytes;
+            ws->uncomp[compression] += ram_bytes;
         }
         bp += hlen;
     }
@@ -246,14 +246,14 @@ static void human_bytes(uint64_t x, char *output)
         snprintf(output, 12, "%4lu%c", x, units[u]);
 }
 
-static void print_table(const char *type, const char *percentage, const char *disk_usage, const char *total_usage)
+static void print_table(const char *type, const char *percentage, const char *disk_usage, const char *uncomp_usage)
 {
-        printf("%-10s %-8s %-12s %-12s\n", type, percentage, disk_usage, total_usage);
+        printf("%-10s %-8s %-12s %-12s\n", type, percentage, disk_usage, uncomp_usage);
 }
 
 int main(int argc, const char **argv)
 {
-    char perc[8], disk_usage[12], total_usage[12];
+    char perc[8], disk_usage[12], uncomp_usage[12];
     struct workspace *ws;
     uint32_t percentage;
 
@@ -273,11 +273,11 @@ int main(int argc, const char **argv)
 
     for (int t=0; t<MAX_ENTRIES; t++)
     {
-            ws->total_all += ws->total[t];
+            ws->uncomp_all += ws->uncomp[t];
             ws->disk_all  += ws->disk[t];
     }
 
-    if (!ws->total_all)
+    if (!ws->uncomp_all)
     {
         fprintf(stderr, "No files.\n");
         return 1;
@@ -287,22 +287,22 @@ int main(int argc, const char **argv)
         printf("Processed %lu files.\n", ws->nfiles);
 
     print_table("Type", "Perc", "Disk Usage", "Uncompressed");
-    percentage = ws->disk_all*100/ws->total_all;
+    percentage = ws->disk_all*100/ws->uncomp_all;
     snprintf(perc, 16, "%3u%%", percentage);
     human_bytes(ws->disk_all, disk_usage);
-    human_bytes(ws->total_all, total_usage);
-    print_table("Data", perc, disk_usage, total_usage);
+    human_bytes(ws->uncomp_all, uncomp_usage);
+    print_table("Data", perc, disk_usage, uncomp_usage);
 
     for (int t=0; t<MAX_ENTRIES; t++)
     {
-        if (!ws->total[t])
+        if (!ws->uncomp[t])
             continue;
         const char *ct = comp_types[t];
-        percentage = ws->disk[t]*100/ws->total[t];
+        percentage = ws->disk[t]*100/ws->uncomp[t];
         snprintf(perc, 8, "%3u%%", percentage);
         human_bytes(ws->disk[t], disk_usage);
-        human_bytes(ws->total[t], total_usage);
-        print_table(ct?ct:"?????", perc, disk_usage, total_usage);
+        human_bytes(ws->uncomp[t], uncomp_usage);
+        print_table(ct?ct:"?????", perc, disk_usage, uncomp_usage);
     }
 
     free(ws);
