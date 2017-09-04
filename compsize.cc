@@ -196,20 +196,16 @@ static void human_bytes(uint64_t x, char *output)
         snprintf(output, 16, "%4lu%c", x, units[u]);
 }
 
-static void print_stats(const char *type, uint64_t d, uint64_t t)
+static void print_table(const char *type, const char *percentage, const char *disk_usage, const char *total_usage)
 {
-    char disk_usage[16], total_usage[16];
-    uint32_t percentage = d*100/t;
-    human_bytes(d, disk_usage);
-    human_bytes(t, total_usage);
-    if (strncmp("none", type, 4) == 0)
-        printf("%-4s %10s\n", type, total_usage);
-    else
-        printf("%-4s %3u%% %-4s/%-4s\n", type, percentage, disk_usage, total_usage);
+        printf("%-10s %-8s %-12s %-12s\n", type, percentage, disk_usage, total_usage);
 }
 
 int main(int argc, const char **argv)
 {
+    char perc[8], disk_usage[12], total_usage[12];
+    uint32_t percentage;
+
     for (int i=0; i<256; i++)
         disk[i]=0, total[i]=0;
     disk_all = total_all = nfiles = 0;
@@ -230,14 +226,25 @@ int main(int argc, const char **argv)
     }
 
     if (nfiles > 1)
-        printf("%lu files.\n", nfiles);
-    print_stats("all", disk_all, total_all);
+        printf("Processed %lu files.\n", nfiles);
+
+    print_table("Type", "Perc", "Disk Usage", "Total Usage");
+    percentage = disk_all*100/total_all;
+    snprintf(perc, 16, "%3u%%", percentage);
+    human_bytes(disk_all, disk_usage);
+    human_bytes(total_all, total_usage);
+    print_table("Data", perc, disk_usage, total_usage);
+
     for (int t=0; t<256; t++)
     {
         if (!total[t])
             continue;
         const char *ct = comp_types[t];
-        print_stats(ct?ct:"?????", disk[t], total[t]);
+        percentage = disk[t]*100/total[t];
+        snprintf(perc, 8, "%3u%%", percentage);
+        human_bytes(disk[t], disk_usage);
+        human_bytes(total[t], total_usage);
+        print_table(ct?ct:"?????", perc, disk_usage, total_usage);
     }
 
     return 0;
