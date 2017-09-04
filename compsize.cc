@@ -202,7 +202,10 @@ static void print_stats(const char *type, uint64_t d, uint64_t t)
     uint32_t percentage = d*100/t;
     human_bytes(d, disk_usage);
     human_bytes(t, total_usage);
-    printf("%-4s %3u%% %-4s/%-4s\n", type, percentage, disk_usage, total_usage);
+    if (strncmp("none", type, 4) == 0)
+        printf("%-4s %10s\n", type, total_usage);
+    else
+        printf("%-4s %3u%% %-4s/%-4s\n", type, percentage, disk_usage, total_usage);
 }
 
 int main(int argc, const char **argv)
