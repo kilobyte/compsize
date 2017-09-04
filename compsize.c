@@ -286,7 +286,7 @@ int main(int argc, const char **argv)
     if (ws->nfiles > 1)
         printf("Processed %lu files.\n", ws->nfiles);
 
-    print_table("Type", "Perc", "Disk Usage", "Total Usage");
+    print_table("Type", "Perc", "Disk Usage", "Uncompressed");
     percentage = ws->disk_all*100/ws->total_all;
     snprintf(perc, 16, "%3u%%", percentage);
     human_bytes(ws->disk_all, disk_usage);
