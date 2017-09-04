@@ -26,8 +26,6 @@ static void die(const char *txt, ...)
     exit(1);
 }
 
-//#define ASSERT(x) do { if (!(x)) die("ASSERT failed '%s' line %d\n", #x, __LINE__);} while(0)
-
 static struct btrfs_ioctl_ino_lookup_args ino_args;
 static struct
 {
