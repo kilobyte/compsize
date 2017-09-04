@@ -8,7 +8,7 @@ producing a report such as:
 [~]$ compsize /usr/share
 90320 files.
 all   79%  1.4G/ 1.8G
-none 100%  1.0G/ 1.0G
+none       1.0G
 lzo   53%  446M/ 833M
 ```
 
