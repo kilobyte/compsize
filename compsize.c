@@ -170,7 +170,10 @@ static void do_file(int fd, struct stat st, struct workspace *ws)
 static void do_recursive_search(const char *path, struct workspace *ws)
 {
         int fd;
+        int path_size;
+        char *fn;
         DIR *dir;
+        struct dirent *de;
         struct stat st;
 
         fd = open(path, O_RDONLY|O_NOFOLLOW|O_NOCTTY);
@@ -189,20 +192,27 @@ static void do_recursive_search(const char *path, struct workspace *ws)
 
         if (S_ISDIR(st.st_mode))
         {
-            struct dirent *de;
             dir = fdopendir(fd);
             if (!dir)
                 die("opendir(\"%s\"): %m\n", path);
-            while ((de = readdir(dir)))
+            while(1)
             {
-                if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, ".."))
-                    continue;
-                char *fn = malloc(PATH_MAX);
-                if (!fn)
-                    die("Out of memory.\n");
-                sprintf(fn, "%s/%s", path, de->d_name);
-                do_recursive_search(fn, ws);
-                free(fn);
+                    de = readdir(dir);
+                    if (!de)
+                        break;
+                    if (!strcmp(de->d_name, "."))
+                        continue;
+                    if (!strcmp(de->d_name, ".."))
+                        continue;
+                    path_size = 2; // slash + \0;
+                    path_size += strlen(path);
+                    path_size += strlen(de->d_name);
+                    fn = malloc(path_size);
+                    if (!fn)
+                        die("Out of memory.\n");
+                    sprintf(fn, "%s/%s", path, de->d_name);
+                    do_recursive_search(fn, ws);
+                    free(fn);
             }
             closedir(dir);
         }
