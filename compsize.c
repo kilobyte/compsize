@@ -1,7 +1,3 @@
-// For asprintf()
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -14,6 +10,7 @@
 #include <stdlib.h>
 #include <sys/ioctl.h>
 #include <inttypes.h>
+#include <linux/limits.h>
 #include "endianness.h"
 #include "radix-tree.h"
 
@@ -200,9 +197,10 @@ static void do_recursive_search(const char *path, struct workspace *ws)
             {
                 if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, ".."))
                     continue;
-                char *fn;
-                if (asprintf(&fn, "%s/%s", path, de->d_name) == -1)
+                char *fn = malloc(PATH_MAX);
+                if (!fn)
                     die("Out of memory.\n");
+                sprintf(fn, "%s/%s", path, de->d_name);
                 do_recursive_search(fn, ws);
                 free(fn);
             }
