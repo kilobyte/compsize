@@ -3,7 +3,7 @@ PREFIX ?= /
 CC ?= gcc
 CFLAGS ?= "-Wall"
 
-debug: CXXFLAGS += -DDEBUG -g
+debug: CFLAGS += -DDEBUG -g
 debug: compsize
 
 compsize: compsize.c radix-tree.c
