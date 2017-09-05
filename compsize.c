@@ -162,8 +162,6 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
             {
                 ws->disk[compression] += len;
                 ws->total[compression] += ram_bytes;
-                ws->disk_all += len;
-                ws->total_all += ram_bytes;
             }
             radix_tree_preload_end();
         }
@@ -174,8 +172,6 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
                  ram_bytes, compression, len);
             ws->disk[compression] += len;
             ws->total[compression] += ram_bytes;
-            ws->disk_all += len;
-            ws->total_all += ram_bytes;
         }
         bp += hlen;
     }
@@ -272,6 +268,12 @@ int main(int argc, const char **argv)
 
     for (; argv[1]; argv++)
         do_recursive_search(argv[1], ws);
+
+    for (int t=0; t<MAX_ENTRIES; t++)
+    {
+            ws->total_all += ws->total[t];
+            ws->disk_all  += ws->disk[t];
+    }
 
     if (!ws->total_all)
     {
