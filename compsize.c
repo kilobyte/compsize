@@ -66,29 +66,43 @@ static uint64_t get_u32(const void *mem)
     return htole32(bad_endian);
 }
 
-static void do_file(int fd, struct stat st, struct workspace *ws)
+static uint64_t get_treeid(int fd)
 {
-    static struct btrfs_ioctl_ino_lookup_args ino_args;
+        static struct btrfs_ioctl_ino_lookup_args ino_args;
+
+        ino_args.treeid   = 0;
+        ino_args.objectid = BTRFS_FIRST_FREE_OBJECTID;
+
+        if (ioctl(fd, BTRFS_IOC_INO_LOOKUP, &ino_args))
+            die("INO_LOOKUP: %m\n");
+        DPRINTF("tree = %llu\n", ino_args.treeid);
+
+        return ino_args.treeid;
+}
+
+static void init_sv2_args(int fd, ino_t st_ino, struct btrfs_sv2_args *sv2_args)
+{
+        sv2_args->key.tree_id = get_treeid(fd);
+        sv2_args->key.max_objectid = st_ino;
+        sv2_args->key.min_objectid = st_ino;
+        sv2_args->key.min_offset = 0;
+        sv2_args->key.max_offset = -1;
+        sv2_args->key.min_transid = 0;
+        sv2_args->key.max_transid = -1;
+        sv2_args->key.min_type = 0;
+        sv2_args->key.max_type = -1;
+        sv2_args->key.nr_items = -1;
+        sv2_args->buf_size = sizeof(sv2_args->buf);
+}
+
+static void do_file(int fd, ino_t st_ino, struct workspace *ws)
+{
     static struct btrfs_sv2_args sv2_args;
 
-    DPRINTF("inode = %" PRIu64"\n", st.st_ino);
+    DPRINTF("inode = %" PRIu64"\n", st_ino);
     ws->nfiles++;
 
-    ino_args.treeid   = 0;
-    ino_args.objectid = BTRFS_FIRST_FREE_OBJECTID;
-    if (ioctl(fd, BTRFS_IOC_INO_LOOKUP, &ino_args))
-        die("INO_LOOKUP: %m\n");
-    DPRINTF("tree = %llu\n", ino_args.treeid);
-
-    memset(&sv2_args.key, 0, sizeof(sv2_args.key));
-    sv2_args.key.tree_id = ino_args.treeid;
-    sv2_args.key.min_objectid = sv2_args.key.max_objectid = st.st_ino;
-    sv2_args.key.min_offset = sv2_args.key.min_transid = 0;
-    sv2_args.key.max_offset = sv2_args.key.max_transid = -1;
-    sv2_args.key.min_type = 0;
-    sv2_args.key.max_type = -1;
-    sv2_args.key.nr_items = -1;
-    sv2_args.buf_size = sizeof(sv2_args.buf);
+    init_sv2_args(fd, st_ino, &sv2_args);
 
     if (ioctl(fd, BTRFS_IOC_TREE_SEARCH_V2, &sv2_args))
         die("SEARCH_V2: %m\n");
@@ -218,7 +232,7 @@ static void do_recursive_search(const char *path, struct workspace *ws)
         }
 
         if (S_ISREG(st.st_mode))
-            do_file(fd, st, ws);
+            do_file(fd, st.st_ino, ws);
 
         close(fd);
 }
