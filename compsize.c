@@ -114,54 +114,55 @@ static void do_file(int fd, struct stat st)
         }
         printf("\e[0m\n");
 */
-        if (head->type == BTRFS_EXTENT_DATA_KEY)
-        {
-            DPRINTF("len=%u\n", hlen);
-            /*
-                u64 generation
-                u64 ram_bytes
-                u8  compression
-                u8  encryption
-                u16 unused
-                u8  type
-            */
-            uint64_t ram_bytes = get_u64(bp+8);
-            uint8_t compression = bp[16];
-            uint8_t type = bp[20];
-            if (type)
-            {
-                /*
-                    ...
-                    u64 disk_bytenr
-                    u64 disk_num_bytes
-                    u64 offset
-                    u64 num_bytes
-                */
-                uint64_t len = get_u64(bp+29);
-                uint64_t disk_bytenr = get_u64(bp+21);
-                DPRINTF("regular: ram_bytes=%lu compression=%u len=%lu disk_bytenr=%lu\n",
-                         ram_bytes, compression, len, disk_bytenr);
+        if (head->type != BTRFS_EXTENT_DATA_KEY) {
+            bp += hlen;
+            continue;
+        }
 
-                radix_tree_preload(GFP_KERNEL);
-                if (radix_tree_insert(&workspace.seen_extents, disk_bytenr, (void *)disk_bytenr) == 0)
-                {
-                    workspace.disk[compression] += len;
-                    workspace.total[compression] += ram_bytes;
-                    workspace.disk_all += len;
-                    workspace.total_all += ram_bytes;
-                }
-                radix_tree_preload_end();
-            }
-            else
+        DPRINTF("len=%u\n", hlen);
+        /*
+            u64 generation
+            u64 ram_bytes
+            u8  compression
+            u8  encryption
+            u16 unused
+            u8  type
+        */
+        uint64_t ram_bytes = get_u64(bp+8);
+        uint8_t compression = bp[16];
+        uint8_t type = bp[20];
+        if (type)
+        {
+                /*
+                ...
+                u64 disk_bytenr
+                u64 disk_num_bytes
+                u64 offset
+                u64 num_bytes
+            */
+            uint64_t len = get_u64(bp+29);
+            uint64_t disk_bytenr = get_u64(bp+21);
+            DPRINTF("regular: ram_bytes=%lu compression=%u len=%lu disk_bytenr=%lu\n",
+                     ram_bytes, compression, len, disk_bytenr);
+            radix_tree_preload(GFP_KERNEL);
+            if (radix_tree_insert(&workspace.seen_extents, disk_bytenr, (void *)disk_bytenr) == 0)
             {
-                uint64_t len = hlen-21;
-                DPRINTF("inline: ram_bytes=%lu compression=%u len=%lu\n",
-                         ram_bytes, compression, len);
                 workspace.disk[compression] += len;
                 workspace.total[compression] += ram_bytes;
                 workspace.disk_all += len;
                 workspace.total_all += ram_bytes;
             }
+            radix_tree_preload_end();
+        }
+        else
+        {
+            uint64_t len = hlen-21;
+            DPRINTF("inline: ram_bytes=%lu compression=%u len=%lu\n",
+                 ram_bytes, compression, len);
+            workspace.disk[compression] += len;
+            workspace.total[compression] += ram_bytes;
+            workspace.disk_all += len;
+            workspace.total_all += ram_bytes;
         }
         bp += hlen;
     }
