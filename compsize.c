@@ -32,7 +32,7 @@ struct btrfs_sv2_args
     uint8_t  buf[SZ_16M]; // hardcoded kernel's limit
 };
 
-static struct
+struct workspace
 {
         uint64_t disk[MAX_ENTRIES];
         uint64_t total[MAX_ENTRIES];
@@ -40,7 +40,9 @@ static struct
         uint64_t total_all;
         uint64_t nfiles;
         struct radix_tree_root seen_extents;
-} workspace;
+};
+
+static struct workspace ws;
 
 static const char *comp_types[MAX_ENTRIES] = { "none", "zlib", "lzo", "zstd" };
 
@@ -75,7 +77,7 @@ static void do_file(int fd, struct stat st)
     static struct btrfs_sv2_args sv2_args;
 
     DPRINTF("inode = %" PRIu64"\n", st.st_ino);
-    workspace.nfiles++;
+    ws.nfiles++;
 
     ino_args.treeid   = 0;
     ino_args.objectid = BTRFS_FIRST_FREE_OBJECTID;
@@ -147,12 +149,12 @@ static void do_file(int fd, struct stat st)
             DPRINTF("regular: ram_bytes=%lu compression=%u len=%lu disk_bytenr=%lu\n",
                      ram_bytes, compression, len, disk_bytenr);
             radix_tree_preload(GFP_KERNEL);
-            if (radix_tree_insert(&workspace.seen_extents, disk_bytenr, (void *)disk_bytenr) == 0)
+            if (radix_tree_insert(&ws.seen_extents, disk_bytenr, (void *)disk_bytenr) == 0)
             {
-                workspace.disk[compression] += len;
-                workspace.total[compression] += ram_bytes;
-                workspace.disk_all += len;
-                workspace.total_all += ram_bytes;
+                ws.disk[compression] += len;
+                ws.total[compression] += ram_bytes;
+                ws.disk_all += len;
+                ws.total_all += ram_bytes;
             }
             radix_tree_preload_end();
         }
@@ -161,10 +163,10 @@ static void do_file(int fd, struct stat st)
             uint64_t len = hlen-21;
             DPRINTF("inline: ram_bytes=%lu compression=%u len=%lu\n",
                  ram_bytes, compression, len);
-            workspace.disk[compression] += len;
-            workspace.total[compression] += ram_bytes;
-            workspace.disk_all += len;
-            workspace.total_all += ram_bytes;
+            ws.disk[compression] += len;
+            ws.total[compression] += ram_bytes;
+            ws.disk_all += len;
+            ws.total_all += ram_bytes;
         }
         bp += hlen;
     }
@@ -248,38 +250,38 @@ int main(int argc, const char **argv)
         return 1;
     }
 
-    memset(&workspace, 0, sizeof(workspace));
+    memset(&ws, 0, sizeof(ws));
 
-    INIT_RADIX_TREE(&workspace.seen_extents, 0);
+    INIT_RADIX_TREE(&ws.seen_extents, 0);
 
     for (; argv[1]; argv++)
         do_recursive_search(argv[1]);
 
-    if (!workspace.total_all)
+    if (!ws.total_all)
     {
         fprintf(stderr, "No files.\n");
         return 1;
     }
 
-    if (workspace.nfiles > 1)
-        printf("Processed %lu files.\n", workspace.nfiles);
+    if (ws.nfiles > 1)
+        printf("Processed %lu files.\n", ws.nfiles);
 
     print_table("Type", "Perc", "Disk Usage", "Total Usage");
-    percentage = workspace.disk_all*100/workspace.total_all;
+    percentage = ws.disk_all*100/ws.total_all;
     snprintf(perc, 16, "%3u%%", percentage);
-    human_bytes(workspace.disk_all, disk_usage);
-    human_bytes(workspace.total_all, total_usage);
+    human_bytes(ws.disk_all, disk_usage);
+    human_bytes(ws.total_all, total_usage);
     print_table("Data", perc, disk_usage, total_usage);
 
     for (int t=0; t<MAX_ENTRIES; t++)
     {
-        if (!workspace.total[t])
+        if (!ws.total[t])
             continue;
         const char *ct = comp_types[t];
-        percentage = workspace.disk[t]*100/workspace.total[t];
+        percentage = ws.disk[t]*100/ws.total[t];
         snprintf(perc, 8, "%3u%%", percentage);
-        human_bytes(workspace.disk[t], disk_usage);
-        human_bytes(workspace.total[t], total_usage);
+        human_bytes(ws.disk[t], disk_usage);
+        human_bytes(ws.total[t], total_usage);
         print_table(ct?ct:"?????", perc, disk_usage, total_usage);
     }
 
