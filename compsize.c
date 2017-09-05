@@ -36,12 +36,12 @@ static void die(const char *txt, ...)
     exit(1);
 }
 
-static struct
+struct btrfs_sv2_args
 {
     struct btrfs_ioctl_search_key key;
     uint64_t buf_size;
     uint8_t  buf[SZ_16M]; // hardcoded kernel's limit
-} sv2_args;
+};
 
 static uint64_t get_u64(const void *mem)
 {
@@ -72,6 +72,7 @@ static const char *comp_types[MAX_ENTRIES] = { "none", "zlib", "lzo", "zstd" };
 static void do_file(int fd, struct stat st)
 {
     static struct btrfs_ioctl_ino_lookup_args ino_args;
+    static struct btrfs_sv2_args sv2_args;
 
     DPRINTF("inode = %" PRIu64"\n", st.st_ino);
     workspace.nfiles++;
