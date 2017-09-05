@@ -25,6 +25,25 @@
 
 #define MAX_ENTRIES 256
 
+struct btrfs_sv2_args
+{
+    struct btrfs_ioctl_search_key key;
+    uint64_t buf_size;
+    uint8_t  buf[SZ_16M]; // hardcoded kernel's limit
+};
+
+static struct
+{
+        uint64_t disk[MAX_ENTRIES];
+        uint64_t total[MAX_ENTRIES];
+        uint64_t disk_all;
+        uint64_t total_all;
+        uint64_t nfiles;
+        struct radix_tree_root seen_extents;
+} workspace;
+
+static const char *comp_types[MAX_ENTRIES] = { "none", "zlib", "lzo", "zstd" };
+
 static void die(const char *txt, ...) __attribute__((format (printf, 1, 2)));
 static void die(const char *txt, ...)
 {
@@ -35,13 +54,6 @@ static void die(const char *txt, ...)
 
     exit(1);
 }
-
-struct btrfs_sv2_args
-{
-    struct btrfs_ioctl_search_key key;
-    uint64_t buf_size;
-    uint8_t  buf[SZ_16M]; // hardcoded kernel's limit
-};
 
 static uint64_t get_u64(const void *mem)
 {
@@ -56,18 +68,6 @@ static uint64_t get_u32(const void *mem)
     uint32_t bad_endian = ((u32_unal*)mem)->v;
     return htole32(bad_endian);
 }
-
-static struct
-{
-        uint64_t disk[MAX_ENTRIES];
-        uint64_t total[MAX_ENTRIES];
-        uint64_t disk_all;
-        uint64_t total_all;
-        uint64_t nfiles;
-        struct radix_tree_root seen_extents;
-} workspace;
-
-static const char *comp_types[MAX_ENTRIES] = { "none", "zlib", "lzo", "zstd" };
 
 static void do_file(int fd, struct stat st)
 {
