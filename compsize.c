@@ -11,8 +11,8 @@
 #include <sys/ioctl.h>
 #include <inttypes.h>
 #include <linux/limits.h>
-#include "endianness.h"
 #include "radix-tree.h"
+#include "endianness.h"
 
 #if defined(DEBUG)
     #define DPRINTF(fmt, args...) fprintf(stderr, fmt, ##args)
@@ -187,7 +187,7 @@ static void do_recursive_search(const char *path, struct workspace *ws)
         if (fstat(fd, &st))
             die("stat(\"%s\"): %m\n", path);
 
-        if ((st.st_mode & S_IFMT) == S_IFDIR)
+        if (S_ISDIR(st.st_mode))
         {
             struct dirent *de;
             dir = fdopendir(fd);
@@ -207,13 +207,8 @@ static void do_recursive_search(const char *path, struct workspace *ws)
             closedir(dir);
         }
 
-        if ((st.st_mode & S_IFMT) != S_IFREG)
-        {
-            close(fd);
-            return;
-        }
-
-        do_file(fd, st, ws);
+        if (S_ISREG(st.st_mode))
+            do_file(fd, st, ws);
 
         close(fd);
 }
