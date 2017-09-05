@@ -36,7 +36,6 @@ static void die(const char *txt, ...)
     exit(1);
 }
 
-static struct btrfs_ioctl_ino_lookup_args ino_args;
 static struct
 {
     struct btrfs_ioctl_search_key key;
@@ -72,6 +71,8 @@ static const char *comp_types[MAX_ENTRIES] = { "none", "zlib", "lzo", "zstd" };
 
 static void do_file(int fd, struct stat st)
 {
+    static struct btrfs_ioctl_ino_lookup_args ino_args;
+
     DPRINTF("inode = %" PRIu64"\n", st.st_ino);
     workspace.nfiles++;
 
