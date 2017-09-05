@@ -240,7 +240,7 @@ static void print_table(const char *type, const char *percentage, const char *di
 int main(int argc, const char **argv)
 {
     char perc[8], disk_usage[12], total_usage[12];
-    struct workspace ws;
+    struct workspace *ws;
     uint32_t percentage;
 
     if (argc <= 1)
@@ -249,40 +249,42 @@ int main(int argc, const char **argv)
         return 1;
     }
 
-    memset(&ws, 0, sizeof(ws));
+    ws = (struct workspace *) calloc(sizeof(*ws), 1);
 
-    INIT_RADIX_TREE(&ws.seen_extents, 0);
+    INIT_RADIX_TREE(&ws->seen_extents, 0);
 
     for (; argv[1]; argv++)
-        do_recursive_search(argv[1], &ws);
+        do_recursive_search(argv[1], ws);
 
-    if (!ws.total_all)
+    if (!ws->total_all)
     {
         fprintf(stderr, "No files.\n");
         return 1;
     }
 
-    if (ws.nfiles > 1)
-        printf("Processed %lu files.\n", ws.nfiles);
+    if (ws->nfiles > 1)
+        printf("Processed %lu files.\n", ws->nfiles);
 
     print_table("Type", "Perc", "Disk Usage", "Total Usage");
-    percentage = ws.disk_all*100/ws.total_all;
+    percentage = ws->disk_all*100/ws->total_all;
     snprintf(perc, 16, "%3u%%", percentage);
-    human_bytes(ws.disk_all, disk_usage);
-    human_bytes(ws.total_all, total_usage);
+    human_bytes(ws->disk_all, disk_usage);
+    human_bytes(ws->total_all, total_usage);
     print_table("Data", perc, disk_usage, total_usage);
 
     for (int t=0; t<MAX_ENTRIES; t++)
     {
-        if (!ws.total[t])
+        if (!ws->total[t])
             continue;
         const char *ct = comp_types[t];
-        percentage = ws.disk[t]*100/ws.total[t];
+        percentage = ws->disk[t]*100/ws->total[t];
         snprintf(perc, 8, "%3u%%", percentage);
-        human_bytes(ws.disk[t], disk_usage);
-        human_bytes(ws.total[t], total_usage);
+        human_bytes(ws->disk[t], disk_usage);
+        human_bytes(ws->total[t], total_usage);
         print_table(ct?ct:"?????", perc, disk_usage, total_usage);
     }
+
+    free(ws);
 
     return 0;
 }
