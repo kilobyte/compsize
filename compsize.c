@@ -221,6 +221,12 @@ static void do_recursive_search(const char *path, struct workspace *ws)
                     de = readdir(dir);
                     if (!de)
                         break;
+                    if (de->d_type != DT_DIR
+                     && de->d_type != DT_REG
+                     && de->d_type != DT_UNKNOWN)
+                    {
+                        continue;
+                    }
                     if (!strcmp(de->d_name, "."))
                         continue;
                     if (!strcmp(de->d_name, ".."))
