@@ -8,13 +8,13 @@ debug: CFLAGS += -Wall -DDEBUG -g
 debug: compsize
 
 compsize.o: compsize.c
-	$(CC) $(CFLAGS) -c -o $@ $^
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $^
 
 radix-tree.o: radix-tree.c
-	$(CC) $(CFLAGS) -c -o $@ $^
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $^
 
 compsize: compsize.o radix-tree.o
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 clean:
 	rm -f compsize
