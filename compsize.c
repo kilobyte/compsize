@@ -151,6 +151,8 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
             uint64_t len = get_u64(bp+29);
             uint64_t disk_bytenr = get_u64(bp+21);
             uint64_t num_bytes = get_u64(bp+45);
+            if (!disk_bytenr)
+                goto hole;
             DPRINTF("regular: ram_bytes=%lu compression=%u len=%lu disk_bytenr=%lu\n",
                      ram_bytes, compression, len, disk_bytenr);
             if (disk_bytenr & 0xfff)
@@ -174,6 +176,7 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
             ws->uncomp[compression] += ram_bytes;
             ws->refd[compression] += ram_bytes;
         }
+    hole:
         bp += hlen;
     }
 }
