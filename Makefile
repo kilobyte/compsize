@@ -11,7 +11,7 @@ compsize.o: compsize.c
 	$(CC) $(CFLAGS) -c -o $@ $^
 
 radix-tree.o: radix-tree.c
-	$(CC) $(CFLAGS) -O0 -c -o $@ $^
+	$(CC) $(CFLAGS) -c -o $@ $^
 
 compsize: compsize.o radix-tree.o
 	$(CC) $(CFLAGS) -o $@ $^
