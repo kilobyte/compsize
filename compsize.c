@@ -187,7 +187,10 @@ static void do_recursive_search(const char *path, struct workspace *ws)
         fd = open(path, O_RDONLY|O_NOFOLLOW|O_NOCTTY);
         if (fd == -1)
         {
-            if (errno == ELOOP)
+            if (errno == ELOOP    // symlink
+             || errno == ENXIO    // some device nodes
+             || errno == ENODEV   // /dev/ptmx
+             || errno == ENOENT)  // something just deleted
                 return;
             else
                 die("open(\"%s\"): %m\n", path);
