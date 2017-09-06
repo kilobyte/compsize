@@ -161,9 +161,9 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
             {
                 ws->disk[compression] += len;
                 ws->uncomp[compression] += ram_bytes;
-                ws->refd[compression] += num_bytes;
             }
             radix_tree_preload_end();
+            ws->refd[compression] += num_bytes;
         }
         else
         {
