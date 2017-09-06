@@ -78,7 +78,7 @@ static uint64_t get_treeid(int fd)
 
         if (ioctl(fd, BTRFS_IOC_INO_LOOKUP, &ino_args))
             die("INO_LOOKUP: %m\n");
-        DPRINTF("tree = %llu\n", ino_args.treeid);
+        DPRINTF("tree = %"PRIu64"\n", ino_args.treeid);
 
         return ino_args.treeid;
 }
@@ -242,9 +242,9 @@ static void human_bytes(uint64_t x, char *output)
     while (x >= 10240)
         u++, x>>=10;
     if (x >= 1024)
-        snprintf(output, HB, " %lu.%lu%c", x>>10, x*10/1024%10, units[u+1]);
+        snprintf(output, HB, " %"PRIu64".%"PRIu64"%c", x>>10, x*10/1024%10, units[u+1]);
     else
-        snprintf(output, HB, "%4lu%c", x, units[u]);
+        snprintf(output, HB, "%4"PRIu64"%c", x, units[u]);
 }
 
 static void print_table(const char *type,
@@ -291,7 +291,7 @@ int main(int argc, const char **argv)
     }
 
     if (ws->nfiles > 1)
-        printf("Processed %lu files.\n", ws->nfiles);
+        printf("Processed %"PRIu64" files.\n", ws->nfiles);
 
     print_table("Type", "Perc", "Disk Usage", "Uncompressed", "Referenced");
     percentage = ws->disk_all*100/ws->uncomp_all;
