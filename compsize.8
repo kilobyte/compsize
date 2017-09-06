@@ -49,6 +49,30 @@ apparent file sizes (sans holes); this is what a traditional filesystem
 that supports holes and efficient tail packing, or
 .IR "tar -S" ,
 would need to store these files
+.P
+Let's see this on an example: a file 128K big is stored as a single extent A
+which compressed to a single 4K page.  It then receives a write of 32K at
+offset 32K, which also compressed to a single 4K page, stored as extent B.
+.P
+The file now appears as:
+.br
+         +-------+-------+---------------+
+.br
+extent A | used  | waste | used          |
+.br
+         +-------+-------+---------------+
+.br
+extent B         | used  |
+.br
+                 +-------+
+.P
+The "waste" inside extent A can't be gotten rid until the whole extent is
+rewritten (for example by \fIdefrag\fR).  If compressed, the whole extent
+needs to be read every time that part of the file is being read, thus the
+"waste" is still required.
+.P
+In this case, we have: \fBDisk Usage\fR: 8KB, \fBUncompressed\fR: 160K,
+\fBReferenced\fR: 128K.
 .SH CAVEATS
 Recently written files may show as not taking any space until they're
 actually allocated and compressed; this happens once they're synced or
