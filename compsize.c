@@ -240,6 +240,7 @@ static void do_recursive_search(const char *path, struct workspace *ws)
         close(fd);
 }
 
+#define HB 12 /* size of buffers */
 static void human_bytes(uint64_t x, char *output)
 {
     static const char *units = "BKMGTPE";
@@ -247,9 +248,9 @@ static void human_bytes(uint64_t x, char *output)
     while (x >= 10240)
         u++, x>>=10;
     if (x >= 1024)
-        snprintf(output, 12, " %lu.%lu%c", x>>10, x*10/1024%10, units[u+1]);
+        snprintf(output, HB, " %lu.%lu%c", x>>10, x*10/1024%10, units[u+1]);
     else
-        snprintf(output, 12, "%4lu%c", x, units[u]);
+        snprintf(output, HB, "%4lu%c", x, units[u]);
 }
 
 static void print_table(const char *type,
@@ -264,7 +265,7 @@ static void print_table(const char *type,
 
 int main(int argc, const char **argv)
 {
-    char perc[8], disk_usage[12], uncomp_usage[12], refd_usage[12];
+    char perc[8], disk_usage[HB], uncomp_usage[HB], refd_usage[HB];
     struct workspace *ws;
     uint32_t percentage;
 
@@ -312,7 +313,7 @@ int main(int argc, const char **argv)
         const char *ct = comp_types[t];
         char unkn_comp[8];
         percentage = ws->disk[t]*100/ws->uncomp[t];
-        snprintf(perc, 8, "%3u%%", percentage);
+        snprintf(perc, sizeof(perc), "%3u%%", percentage);
         human_bytes(ws->disk[t], disk_usage);
         human_bytes(ws->uncomp[t], uncomp_usage);
         human_bytes(ws->refd[t], refd_usage);
