@@ -298,6 +298,7 @@ int main(int argc, const char **argv)
     snprintf(perc, sizeof(perc), "%3u%%", percentage);
     human_bytes(ws->disk_all, disk_usage);
     human_bytes(ws->uncomp_all, uncomp_usage);
+    human_bytes(ws->refd_all, refd_usage);
     print_table("Data", perc, disk_usage, uncomp_usage, refd_usage);
 
     for (int t=0; t<MAX_ENTRIES; t++)
