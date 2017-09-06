@@ -113,9 +113,10 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
     {
         struct btrfs_ioctl_search_header *head = (struct btrfs_ioctl_search_header*)bp;
         uint32_t hlen = get_u32(&head->len);
+        uint32_t htype = get_u32(&head->type);
         DPRINTF("{ transid=%lu objectid=%lu offset=%lu type=%u len=%u }\n",
                 get_u32(&head->transid), get_u32(&head->objectid), get_u32(&head->offset),
-                head->type, hlen);
+                htype, hlen);
         bp += sizeof(struct btrfs_ioctl_search_header);
 /*
         printf("\e[0;30;1m");
@@ -127,7 +128,7 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
         }
         printf("\e[0m\n");
 */
-        if (head->type != BTRFS_EXTENT_DATA_KEY) {
+        if (htype != BTRFS_EXTENT_DATA_KEY) {
             bp += hlen;
             continue;
         }
