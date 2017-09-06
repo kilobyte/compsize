@@ -153,6 +153,9 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
             uint64_t num_bytes = get_u64(bp+45);
             DPRINTF("regular: ram_bytes=%lu compression=%u len=%lu disk_bytenr=%lu\n",
                      ram_bytes, compression, len, disk_bytenr);
+            if (disk_bytenr & 0xfff)
+                die("Extent not 4K-aligned at %"PRIu64"?!?\n", disk_bytenr);
+            disk_bytenr >>= 12;
             radix_tree_preload(GFP_KERNEL);
             if (radix_tree_insert(&ws->seen_extents, disk_bytenr, (void *)disk_bytenr) == 0)
             {
