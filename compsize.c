@@ -121,16 +121,7 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
                 get_u32(&head->transid), get_u32(&head->objectid), get_u32(&head->offset),
                 htype, hlen);
         bp += sizeof(struct btrfs_ioctl_search_header);
-/*
-        printf("\e[0;30;1m");
-        for (uint32_t i = 0; i < hlen; i++)
-        {
-            printf("%02x", bp[i]);
-            if (i%8==7)
-                printf(" ");
-        }
-        printf("\e[0m\n");
-*/
+
         if (htype != BTRFS_EXTENT_DATA_KEY) {
             bp += hlen;
             continue;
