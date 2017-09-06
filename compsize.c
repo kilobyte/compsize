@@ -300,7 +300,7 @@ int main(int argc, const char **argv)
 
     print_table("Type", "Perc", "Disk Usage", "Uncompressed", "Referenced");
     percentage = ws->disk_all*100/ws->uncomp_all;
-    snprintf(perc, 16, "%3u%%", percentage);
+    snprintf(perc, sizeof(perc), "%3u%%", percentage);
     human_bytes(ws->disk_all, disk_usage);
     human_bytes(ws->uncomp_all, uncomp_usage);
     print_table("Data", perc, disk_usage, uncomp_usage, refd_usage);
