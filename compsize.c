@@ -193,12 +193,13 @@ static void do_recursive_search(const char *path, struct workspace *ws)
         struct dirent *de;
         struct stat st;
 
-        fd = open(path, O_RDONLY|O_NOFOLLOW|O_NOCTTY);
+        fd = open(path, O_RDONLY|O_NOFOLLOW|O_NOCTTY|O_NONBLOCK);
         if (fd == -1)
         {
             if (errno == ELOOP    // symlink
              || errno == ENXIO    // some device nodes
              || errno == ENODEV   // /dev/ptmx
+             || errno == ENOMEDIUM// more device nodes
              || errno == ENOENT)  // something just deleted
                 return;
             else
