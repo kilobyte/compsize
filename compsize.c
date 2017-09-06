@@ -309,12 +309,18 @@ int main(int argc, const char **argv)
         if (!ws->uncomp[t])
             continue;
         const char *ct = comp_types[t];
+        char unkn_comp[8];
         percentage = ws->disk[t]*100/ws->uncomp[t];
         snprintf(perc, 8, "%3u%%", percentage);
         human_bytes(ws->disk[t], disk_usage);
         human_bytes(ws->uncomp[t], uncomp_usage);
         human_bytes(ws->refd[t], refd_usage);
-        print_table(ct?ct:"?????", perc, disk_usage, uncomp_usage, refd_usage);
+        if (!ct)
+        {
+            snprintf(unkn_comp, sizeof(unkn_comp), "?%u", t);
+            ct = unkn_comp;
+        }
+        print_table(ct, perc, disk_usage, uncomp_usage, refd_usage);
     }
 
     free(ws);
