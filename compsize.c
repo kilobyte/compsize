@@ -20,6 +20,7 @@
     #define DPRINTF(fmt, args...)
 #endif
 
+// We recognize yet-unknown compression types (u8).
 #define MAX_ENTRIES 256
 
 struct btrfs_sv2_args
