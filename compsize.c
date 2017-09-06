@@ -265,6 +265,7 @@ int main(int argc, const char **argv)
 
     ws = (struct workspace *) calloc(sizeof(*ws), 1);
 
+    radix_tree_init();
     INIT_RADIX_TREE(&ws->seen_extents, 0);
 
     for (; argv[1]; argv++)
