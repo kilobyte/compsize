@@ -141,7 +141,10 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
         uint8_t type = bp[20];
         if (type)
         {
-                /*
+            if (hlen != 53)
+                die("Regular extent's header not 53 bytes (%u) long?!?\n", hlen);
+
+            /*
                 ...
                 u64 disk_bytenr
                 u64 disk_num_bytes
