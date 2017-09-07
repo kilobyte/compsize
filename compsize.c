@@ -116,6 +116,8 @@ static inline int is_inline_data(uint8_t type)
 static void do_file(int fd, ino_t st_ino, struct workspace *ws)
 {
     static struct btrfs_sv2_args sv2_args;
+    struct btrfs_ioctl_search_header *head;
+    struct btrfs_file_extent_item    *extent_item;
     uint32_t nr_items, hlen, htype;
 
     DPRINTF("inode = %" PRIu64"\n", st_ino);
@@ -131,7 +133,7 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
     uint8_t *bp = sv2_args.buf;
     for (; nr_items > 0; nr_items--, bp += hlen)
     {
-        struct btrfs_ioctl_search_header *head = (struct btrfs_ioctl_search_header*)bp;
+        head = (struct btrfs_ioctl_search_header*)bp;
         htype = get_u32(&head->type);
         hlen = get_u32(&head->len);
         DPRINTF("{ transid=%lu objectid=%lu offset=%lu type=%u len=%u }\n",
@@ -143,17 +145,11 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
             continue;
 
         DPRINTF("len=%u\n", hlen);
-        /*
-            u64 generation
-            u64 ram_bytes
-            u8  compression
-            u8  encryption
-            u16 unused
-            u8  type
-        */
-        uint64_t ram_bytes = get_u64(bp+8);
-        uint8_t compression = bp[16];
-        uint8_t type = bp[20];
+        extent_item = (struct btrfs_file_extent_item *) bp;
+
+        uint64_t ram_bytes = get_u64(&extent_item->ram_bytes);
+        uint8_t compression = extent_item->compression;
+        uint8_t type = extent_item->type;
 
         if (is_inline_data(type))
         {
@@ -169,16 +165,9 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
         if (hlen != 53)
             die("Regular extent's header not 53 bytes (%u) long?!?\n", hlen);
 
-        /*
-            ...
-            u64 disk_bytenr
-            u64 disk_num_bytes
-            u64 offset
-            u64 num_bytes
-        */
-        uint64_t len = get_u64(bp+29);
-        uint64_t disk_bytenr = get_u64(bp+21);
-        uint64_t num_bytes = get_u64(bp+45);
+        uint64_t len = get_u64(&extent_item->disk_num_bytes);
+        uint64_t disk_bytenr = get_u64(&extent_item->disk_bytenr);
+        uint64_t num_bytes = get_u64(&extent_item->num_bytes);
 
         if (is_hole(disk_bytenr))
             continue;
