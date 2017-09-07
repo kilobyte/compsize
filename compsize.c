@@ -103,9 +103,20 @@ static void init_sv2_args(int fd, ino_t st_ino, struct btrfs_sv2_args *sv2_args)
         sv2_args->buf_size = sizeof(sv2_args->buf);
 }
 
+static inline int is_hole(uint64_t disk_bytenr)
+{
+        return disk_bytenr == 0;
+}
+
+static inline int is_inline_data(uint8_t type)
+{
+        return type == 0;
+}
+
 static void do_file(int fd, ino_t st_ino, struct workspace *ws)
 {
     static struct btrfs_sv2_args sv2_args;
+    uint32_t nr_items, hlen, htype;
 
     DPRINTF("inode = %" PRIu64"\n", st_ino);
     ws->nfiles++;
@@ -114,23 +125,22 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
 
     if (ioctl(fd, BTRFS_IOC_TREE_SEARCH_V2, &sv2_args))
         die("SEARCH_V2: %m\n");
-    DPRINTF("nr_items = %u\n", sv2_args.key.nr_items);
+    nr_items = sv2_args.key.nr_items;
+    DPRINTF("nr_items = %u\n", nr_items);
 
     uint8_t *bp = sv2_args.buf;
-    while (sv2_args.key.nr_items--)
+    for (; nr_items > 0; nr_items--, bp += hlen)
     {
         struct btrfs_ioctl_search_header *head = (struct btrfs_ioctl_search_header*)bp;
-        uint32_t hlen = get_u32(&head->len);
-        uint32_t htype = get_u32(&head->type);
+        htype = get_u32(&head->type);
+        hlen = get_u32(&head->len);
         DPRINTF("{ transid=%lu objectid=%lu offset=%lu type=%u len=%u }\n",
                 get_u32(&head->transid), get_u32(&head->objectid), get_u32(&head->offset),
                 htype, hlen);
-        bp += sizeof(struct btrfs_ioctl_search_header);
+        bp += sizeof(*head);
 
-        if (htype != BTRFS_EXTENT_DATA_KEY) {
-            bp += hlen;
+        if (htype != BTRFS_EXTENT_DATA_KEY)
             continue;
-        }
 
         DPRINTF("len=%u\n", hlen);
         /*
@@ -144,48 +154,50 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
         uint64_t ram_bytes = get_u64(bp+8);
         uint8_t compression = bp[16];
         uint8_t type = bp[20];
-        if (type)
-        {
-            if (hlen != 53)
-                die("Regular extent's header not 53 bytes (%u) long?!?\n", hlen);
 
-            /*
-                ...
-                u64 disk_bytenr
-                u64 disk_num_bytes
-                u64 offset
-                u64 num_bytes
-            */
-            uint64_t len = get_u64(bp+29);
-            uint64_t disk_bytenr = get_u64(bp+21);
-            uint64_t num_bytes = get_u64(bp+45);
-            if (!disk_bytenr)
-                goto hole;
-            DPRINTF("regular: ram_bytes=%lu compression=%u len=%lu disk_bytenr=%lu\n",
-                     ram_bytes, compression, len, disk_bytenr);
-            if (disk_bytenr & 0xfff)
-                die("Extent not 4K-aligned at %"PRIu64"?!?\n", disk_bytenr);
-            disk_bytenr >>= 12;
-            radix_tree_preload(GFP_KERNEL);
-            if (radix_tree_insert(&ws->seen_extents, disk_bytenr, (void *)disk_bytenr) == 0)
-            {
-                ws->disk[compression] += len;
-                ws->uncomp[compression] += ram_bytes;
-            }
-            radix_tree_preload_end();
-            ws->refd[compression] += num_bytes;
-        }
-        else
+        if (is_inline_data(type))
         {
-            uint64_t len = hlen-21;
-            DPRINTF("inline: ram_bytes=%lu compression=%u len=%lu\n",
+            uint32_t len = hlen-21;
+            DPRINTF("inline: ram_bytes=%lu compression=%u len=%u\n",
                  ram_bytes, compression, len);
             ws->disk[compression] += len;
             ws->uncomp[compression] += ram_bytes;
             ws->refd[compression] += ram_bytes;
+            continue;
         }
-    hole:
-        bp += hlen;
+
+        if (hlen != 53)
+            die("Regular extent's header not 53 bytes (%u) long?!?\n", hlen);
+
+        /*
+            ...
+            u64 disk_bytenr
+            u64 disk_num_bytes
+            u64 offset
+            u64 num_bytes
+        */
+        uint64_t len = get_u64(bp+29);
+        uint64_t disk_bytenr = get_u64(bp+21);
+        uint64_t num_bytes = get_u64(bp+45);
+
+        if (is_hole(disk_bytenr))
+            continue;
+
+        DPRINTF("regular: ram_bytes=%lu compression=%u len=%lu disk_bytenr=%lu\n",
+             ram_bytes, compression, len, disk_bytenr);
+
+        if (!IS_ALIGNED(disk_bytenr, 1 << 12))
+            die("Extent not 4K-aligned at %"PRIu64"?!?\n", disk_bytenr);
+
+        disk_bytenr >>= 12;
+        radix_tree_preload(GFP_KERNEL);
+        if (radix_tree_insert(&ws->seen_extents, disk_bytenr, (void *)disk_bytenr) == 0)
+        {
+             ws->disk[compression] += len;
+             ws->uncomp[compression] += ram_bytes;
+        }
+        radix_tree_preload_end();
+        ws->refd[compression] += num_bytes;
     }
 }
 
@@ -239,7 +251,7 @@ static void do_recursive_search(const char *path, struct workspace *ws)
                     path_size = 2; // slash + \0;
                     path_size += strlen(path);
                     path_size += strlen(de->d_name);
-                    fn = malloc(path_size);
+                    fn = (char *) malloc(path_size);
                     if (!fn)
                         die("Out of memory.\n");
                     sprintf(fn, "%s/%s", path, de->d_name);
