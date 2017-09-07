@@ -23,6 +23,11 @@
 // We recognize yet-unknown compression types (u8).
 #define MAX_ENTRIES 256
 
+#ifndef SZ_16M
+ // old kernel headers
+ #define SZ_16M 16777216
+#endif
+
 struct btrfs_sv2_args
 {
     struct btrfs_ioctl_search_key key;
