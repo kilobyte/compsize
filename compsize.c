@@ -176,7 +176,7 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
 {
     static struct btrfs_sv2_args sv2_args;
     struct btrfs_ioctl_search_header *head;
-    uint32_t nr_items, hlen, htype;
+    uint32_t nr_items, hlen;
     uint8_t *bp;
 
     DPRINTF("inode = %" PRIu64"\n", st_ino);
@@ -193,11 +193,10 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
     for (; nr_items > 0; nr_items--, bp += hlen)
     {
         head = (struct btrfs_ioctl_search_header*)bp;
-        htype = get_u32(&head->type);
         hlen = get_u32(&head->len);
         DPRINTF("{ transid=%lu objectid=%lu offset=%lu type=%u len=%u }\n",
                 get_u32(&head->transid), get_u32(&head->objectid), get_u32(&head->offset),
-                htype, hlen);
+                get_u32(&head->type), hlen);
         bp += sizeof(*head);
 
         parse_file_extent_item(bp, hlen, ws);
