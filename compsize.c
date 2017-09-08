@@ -116,7 +116,7 @@ static inline int is_inline_data(uint8_t type)
 static void parse_file_extent_item(uint8_t *bp, uint32_t hlen, struct workspace *ws)
 {
     struct btrfs_file_extent_item *ei;
-    uint64_t len, ram_bytes, disk_bytenr, num_bytes;
+    uint64_t disk_num_bytes, ram_bytes, disk_bytenr, num_bytes;
     uint32_t inline_header_sz;
     uint8_t  comp_type;
 
@@ -135,10 +135,10 @@ static void parse_file_extent_item(uint8_t *bp, uint32_t hlen, struct workspace 
         inline_header_sz -= sizeof(ei->offset);
         inline_header_sz -= sizeof(ei->num_bytes);
 
-        len = hlen-inline_header_sz;
-        DPRINTF("inline: ram_bytes=%lu compression=%u len=%lu\n",
-             ram_bytes, compression, len);
-        ws->disk[comp_type] += len;
+        disk_num_bytes = hlen-inline_header_sz;
+        DPRINTF("inline: ram_bytes=%lu compression=%u disk_num_bytes=%lu\n",
+             ram_bytes, compression, disk_num_bytes);
+        ws->disk[comp_type] += disk_num_bytes;
         ws->uncomp[comp_type] += ram_bytes;
         ws->refd[comp_type] += ram_bytes;
         return;
@@ -147,15 +147,15 @@ static void parse_file_extent_item(uint8_t *bp, uint32_t hlen, struct workspace 
     if (hlen != sizeof(*ei))
         die("Regular extent's header not 53 bytes (%u) long?!?\n", hlen);
 
-    len = get_u64(&ei->disk_num_bytes);
+    disk_num_bytes = get_u64(&ei->disk_num_bytes);
     disk_bytenr = get_u64(&ei->disk_bytenr);
     num_bytes = get_u64(&ei->num_bytes);
 
     if (is_hole(disk_bytenr))
         return;
 
-    DPRINTF("regular: ram_bytes=%lu compression=%u len=%lu disk_bytenr=%lu\n",
-         ram_bytes, compression, len, disk_bytenr);
+    DPRINTF("regular: ram_bytes=%lu compression=%u disk_num_bytes=%lu disk_bytenr=%lu\n",
+         ram_bytes, compression, disk_num_bytes, disk_bytenr);
 
     if (!IS_ALIGNED(disk_bytenr, 1 << 12))
         die("Extent not 4K-aligned at %"PRIu64"?!?\n", disk_bytenr);
@@ -164,7 +164,7 @@ static void parse_file_extent_item(uint8_t *bp, uint32_t hlen, struct workspace 
     radix_tree_preload(GFP_KERNEL);
     if (radix_tree_insert(&ws->seen_extents, disk_bytenr, (void *)disk_bytenr) == 0)
     {
-         ws->disk[comp_type] += len;
+         ws->disk[comp_type] += disk_num_bytes;
          ws->uncomp[comp_type] += ram_bytes;
     }
     radix_tree_preload_end();
