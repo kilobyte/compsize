@@ -97,8 +97,9 @@ static void init_sv2_args(int fd, ino_t st_ino, struct btrfs_sv2_args *sv2_args)
         sv2_args->key.max_offset = -1;
         sv2_args->key.min_transid = 0;
         sv2_args->key.max_transid = -1;
-        sv2_args->key.min_type = 0;
-        sv2_args->key.max_type = -1;
+        // Only search for EXTENT_DATA_KEY
+        sv2_args->key.min_type = BTRFS_EXTENT_DATA_KEY;
+        sv2_args->key.max_type = BTRFS_EXTENT_DATA_KEY;
         sv2_args->key.nr_items = -1;
         sv2_args->buf_size = sizeof(sv2_args->buf);
 }
@@ -198,9 +199,6 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
                 get_u32(&head->transid), get_u32(&head->objectid), get_u32(&head->offset),
                 htype, hlen);
         bp += sizeof(*head);
-
-        if (htype != BTRFS_EXTENT_DATA_KEY)
-            continue;
 
         parse_file_extent_item(bp, hlen, ws);
     }
