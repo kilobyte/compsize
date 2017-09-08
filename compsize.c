@@ -74,23 +74,9 @@ static uint64_t get_u32(const void *mem)
     return htole32(bad_endian);
 }
 
-static uint64_t get_treeid(int fd)
+static void init_sv2_args(ino_t st_ino, struct btrfs_sv2_args *sv2_args)
 {
-        static struct btrfs_ioctl_ino_lookup_args ino_args;
-
-        ino_args.treeid   = 0;
-        ino_args.objectid = BTRFS_FIRST_FREE_OBJECTID;
-
-        if (ioctl(fd, BTRFS_IOC_INO_LOOKUP, &ino_args))
-            die("INO_LOOKUP: %m\n");
-        DPRINTF("tree = %"PRIu64"\n", ino_args.treeid);
-
-        return ino_args.treeid;
-}
-
-static void init_sv2_args(int fd, ino_t st_ino, struct btrfs_sv2_args *sv2_args)
-{
-        sv2_args->key.tree_id = get_treeid(fd);
+        sv2_args->key.tree_id = 0;
         sv2_args->key.max_objectid = st_ino;
         sv2_args->key.min_objectid = st_ino;
         sv2_args->key.min_offset = 0;
@@ -182,10 +168,11 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
     DPRINTF("inode = %" PRIu64"\n", st_ino);
     ws->nfiles++;
 
-    init_sv2_args(fd, st_ino, &sv2_args);
+    init_sv2_args(st_ino, &sv2_args);
 
     if (ioctl(fd, BTRFS_IOC_TREE_SEARCH_V2, &sv2_args))
         die("SEARCH_V2: %m\n");
+
     nr_items = sv2_args.key.nr_items;
     DPRINTF("nr_items = %u\n", nr_items);
 
