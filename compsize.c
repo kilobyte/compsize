@@ -222,6 +222,11 @@ static void do_recursive_search(const char *path, struct workspace *ws)
             dir = fdopendir(fd);
             if (!dir)
                 die("opendir(\"%s\"): %m\n", path);
+            path_size = 2; // slash + \0;
+            path_size += strlen(path) + NAME_MAX;
+            fn = (char *) malloc(path_size);
+            if (!fn)
+                die("Out of memory.\n");
             while(1)
             {
                     de = readdir(dir);
@@ -237,16 +242,10 @@ static void do_recursive_search(const char *path, struct workspace *ws)
                         continue;
                     if (!strcmp(de->d_name, ".."))
                         continue;
-                    path_size = 2; // slash + \0;
-                    path_size += strlen(path);
-                    path_size += strlen(de->d_name);
-                    fn = (char *) malloc(path_size);
-                    if (!fn)
-                        die("Out of memory.\n");
                     sprintf(fn, "%s/%s", path, de->d_name);
                     do_recursive_search(fn, ws);
-                    free(fn);
             }
+            free(fn);
             closedir(dir);
         }
 
