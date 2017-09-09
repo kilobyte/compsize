@@ -124,7 +124,7 @@ static void parse_file_extent_item(uint8_t *bp, uint32_t hlen, struct workspace 
 
         disk_num_bytes = hlen-inline_header_sz;
         DPRINTF("inline: ram_bytes=%lu compression=%u disk_num_bytes=%lu\n",
-             ram_bytes, compression, disk_num_bytes);
+             ram_bytes, comp_type, disk_num_bytes);
         ws->disk[comp_type] += disk_num_bytes;
         ws->uncomp[comp_type] += ram_bytes;
         ws->refd[comp_type] += ram_bytes;
@@ -142,7 +142,7 @@ static void parse_file_extent_item(uint8_t *bp, uint32_t hlen, struct workspace 
         return;
 
     DPRINTF("regular: ram_bytes=%lu compression=%u disk_num_bytes=%lu disk_bytenr=%lu\n",
-         ram_bytes, compression, disk_num_bytes, disk_bytenr);
+         ram_bytes, comp_type, disk_num_bytes, disk_bytenr);
 
     if (!IS_ALIGNED(disk_bytenr, 1 << 12))
         die("Extent not 4K-aligned at %"PRIu64"?!?\n", disk_bytenr);
