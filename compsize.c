@@ -327,7 +327,7 @@ int main(int argc, const char **argv)
         if (!ws->uncomp[t])
             continue;
         const char *ct = comp_types[t];
-        char unkn_comp[8];
+        char unkn_comp[12];
         percentage = ws->disk[t]*100/ws->uncomp[t];
         snprintf(perc, sizeof(perc), "%3u%%", percentage);
         human_bytes(ws->disk[t], disk_usage);
