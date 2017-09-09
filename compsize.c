@@ -67,7 +67,7 @@ static uint64_t get_u64(const void *mem)
     return htole64(bad_endian);
 }
 
-static uint64_t get_u32(const void *mem)
+static uint32_t get_u32(const void *mem)
 {
     typedef struct __attribute__((__packed__)) { uint32_t v; } u32_unal;
     uint32_t bad_endian = ((u32_unal*)mem)->v;
