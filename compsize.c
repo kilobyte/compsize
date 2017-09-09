@@ -182,7 +182,7 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
         head = (struct btrfs_ioctl_search_header*)bp;
         hlen = get_u32(&head->len);
         DPRINTF("{ transid=%lu objectid=%lu offset=%lu type=%u len=%u }\n",
-                get_u32(&head->transid), get_u32(&head->objectid), get_u32(&head->offset),
+                get_u64(&head->transid), get_u64(&head->objectid), get_u64(&head->offset),
                 get_u32(&head->type), hlen);
         bp += sizeof(*head);
 
