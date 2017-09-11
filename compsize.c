@@ -307,7 +307,10 @@ int main(int argc, const char **argv)
 
     if (!ws->uncomp_all)
     {
-        fprintf(stderr, "No files.\n");
+        if (!ws->nfiles)
+            fprintf(stderr, "No files.\n");
+        else
+            fprintf(stderr, "All empty or still-delalloced files.\n");
         return 1;
     }
 
