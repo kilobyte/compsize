@@ -1,6 +1,6 @@
 PREFIX ?= /
 CC ?= gcc
-CFLAGS ?= -Wall
+CFLAGS ?= -Wall -std=gnu90
 
 all: compsize
 

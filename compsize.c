@@ -283,6 +283,7 @@ int main(int argc, const char **argv)
     char perc[8], disk_usage[HB], uncomp_usage[HB], refd_usage[HB];
     struct workspace *ws;
     uint32_t percentage;
+    int t;
 
     if (argc <= 1)
     {
@@ -298,7 +299,7 @@ int main(int argc, const char **argv)
     for (; argv[1]; argv++)
         do_recursive_search(argv[1], ws);
 
-    for (int t=0; t<MAX_ENTRIES; t++)
+    for (t=0; t<MAX_ENTRIES; t++)
     {
             ws->uncomp_all += ws->uncomp[t];
             ws->disk_all   += ws->disk[t];
@@ -325,7 +326,7 @@ int main(int argc, const char **argv)
     human_bytes(ws->refd_all, refd_usage);
     print_table("Data", perc, disk_usage, uncomp_usage, refd_usage);
 
-    for (int t=0; t<MAX_ENTRIES; t++)
+    for (t=0; t<MAX_ENTRIES; t++)
     {
         if (!ws->uncomp[t])
             continue;
