@@ -31,3 +31,9 @@ The fields are:
  * Referenced: apparent size of files (minus holes)
 
 The ioctl used requires root.
+
+# Installation:
+
+Besides regular C toolchain, you need btrfs userspace headers, usually
+installed as part of btrfs-progs.  Required kernel: 3.16, btrfs-progs: 3.18
+(untested!).
