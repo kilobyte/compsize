@@ -199,7 +199,7 @@ static void do_recursive_search(const char *path, struct workspace *ws)
         struct dirent *de;
         struct stat st;
 
-        fd = open(path, O_RDONLY|O_NOFOLLOW|O_NOCTTY|O_NONBLOCK);
+        fd = open(path, O_RDONLY|O_NOFOLLOW|O_NOCTTY|O_NONBLOCK|__O_LARGEFILE);
         if (fd == -1)
         {
             if (errno == ELOOP    // symlink
