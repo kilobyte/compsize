@@ -45,6 +45,7 @@ struct workspace
         uint64_t uncomp_all;
         uint64_t refd_all;
         uint64_t nfiles;
+        uint64_t nextents, nrefs, ninline;
         struct radix_tree_root seen_extents;
 };
 
@@ -129,6 +130,7 @@ static void parse_file_extent_item(uint8_t *bp, uint32_t hlen, struct workspace 
         ws->disk[comp_type] += disk_num_bytes;
         ws->uncomp[comp_type] += ram_bytes;
         ws->refd[comp_type] += ram_bytes;
+        ws->ninline++;
         return;
     }
 
@@ -154,9 +156,11 @@ static void parse_file_extent_item(uint8_t *bp, uint32_t hlen, struct workspace 
     {
          ws->disk[comp_type] += disk_num_bytes;
          ws->uncomp[comp_type] += ram_bytes;
+         ws->nextents++;
     }
     radix_tree_preload_end();
     ws->refd[comp_type] += num_bytes;
+    ws->nrefs++;
 }
 
 static void do_file(int fd, ino_t st_ino, struct workspace *ws)
@@ -317,7 +321,11 @@ int main(int argc, const char **argv)
     }
 
     if (ws->nfiles > 1)
-        printf("Processed %"PRIu64" files.\n", ws->nfiles);
+    {
+        printf("Processed %"PRIu64" files, %"PRIu64" regular extents "
+               "(%"PRIu64" refs), %"PRIu64" inline.\n",
+               ws->nfiles, ws->nextents, ws->nrefs, ws->ninline);
+    }
 
     print_table("Type", "Perc", "Disk Usage", "Uncompressed", "Referenced");
     percentage = ws->disk_all*100/ws->uncomp_all;
