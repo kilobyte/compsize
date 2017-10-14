@@ -263,11 +263,15 @@ static void do_recursive_search(const char *path, struct workspace *ws)
         close(fd);
 }
 
-#define HB 12 /* size of buffers */
+#define HB 24 /* size of buffers */
 static void human_bytes(uint64_t x, char *output)
 {
     static const char *units = "BKMGTPE";
     int u = 0;
+
+    if (opt_bytes)
+        return (void)snprintf(output, HB, "%"PRIu64, x);
+
     while (x >= 10240)
         u++, x>>=10;
     if (x >= 1024)
