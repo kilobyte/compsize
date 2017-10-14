@@ -73,6 +73,10 @@ needs to be read every time that part of the file is being read, thus the
 .P
 In this case, we have: \fBDisk Usage\fR: 8KB, \fBUncompressed\fR: 160K,
 \fBReferenced\fR: 128K.
+.SH OPTIONS
+.TP
+.BR -b / --bytes
+Show raw byte counts rather than human-friendly sizes.
 .SH CAVEATS
 Recently written files may show as not taking any space until they're
 actually allocated and compressed; this happens once they're synced or
