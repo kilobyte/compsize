@@ -12,6 +12,7 @@
 #include <sys/ioctl.h>
 #include <inttypes.h>
 #include <linux/limits.h>
+#include <getopt.h>
 #include "radix-tree.h"
 #include "endianness.h"
 
@@ -50,6 +51,8 @@ struct workspace
 };
 
 static const char *comp_types[MAX_ENTRIES] = { "none", "zlib", "lzo", "zstd" };
+
+static int opt_bytes = 0;
 
 static void die(const char *txt, ...) __attribute__((format (printf, 1, 2)));
 static void die(const char *txt, ...)
@@ -283,26 +286,51 @@ static void print_table(const char *type,
                disk_usage, uncomp_usage, refd_usage);
 }
 
-int main(int argc, const char **argv)
+static void parse_options(int argc, char **argv)
+{
+    static struct option long_options[] =
+    {
+        {"bytes",                  0, 0, 'b'},
+        {0},
+    };
+
+    while (1)
+    {
+        switch (getopt_long(argc, argv, "b", long_options, 0))
+        {
+        case 'b':
+            opt_bytes = 1;
+            break;
+        case -1:
+            return;
+        default:
+            exit(1);
+        }
+    }
+}
+
+int main(int argc, char **argv)
 {
     char perc[8], disk_usage[HB], uncomp_usage[HB], refd_usage[HB];
     struct workspace *ws;
     uint32_t percentage;
     int t;
 
-    if (argc <= 1)
+    ws = (struct workspace *) calloc(sizeof(*ws), 1);
+
+    parse_options(argc, argv);
+
+    if (optind >= argc)
     {
         fprintf(stderr, "Usage: compsize file-or-dir1 [file-or-dir2 ...]\n");
         return 1;
     }
 
-    ws = (struct workspace *) calloc(sizeof(*ws), 1);
-
     radix_tree_init();
     INIT_RADIX_TREE(&ws->seen_extents, 0);
 
-    for (; argv[1]; argv++)
-        do_recursive_search(argv[1], ws);
+    for (; argv[optind]; optind++)
+        do_recursive_search(argv[optind], ws);
 
     for (t=0; t<MAX_ENTRIES; t++)
     {
