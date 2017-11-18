@@ -1,0 +1,5 @@
+btrfs-compsize (0~88-g58ff588-1) unstable; urgency=medium
+
+  * Initial release, closes: #874313
+
+ -- Adam Borowski <kilobyte@angband.pl>  Sat, 18 Nov 2017 03:23:55 +0100

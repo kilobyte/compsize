@@ -1,0 +1,10 @@
+#!/usr/bin/make -f
+export DEB_BUILD_MAINT_OPTIONS=hardening=+all
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	+$(MAKE) $(shell dpkg-buildflags --export=cmdline)
+
+override_dh_auto_install:

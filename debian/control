@@ -1,0 +1,25 @@
+Source: btrfs-compsize
+Section: admin
+Priority: optional
+Maintainer: Adam Borowski <kilobyte@angband.pl>
+Build-Depends: debhelper (>> 10), btrfs-progs
+Standards-Version: 4.1.1
+Rules-Requires-Root: no
+Homepage: http://github.com/kilobyte/compsize
+Vcs-Git: https://github.com/kilobyte/compsize.git -b debian
+Vcs-Browser: https://github.com/kilobyte/compsize/tree/debian
+
+Package: btrfs-compsize
+Architecture: linux-any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Suggests: btrfs-progs
+Description: calculate compression ratio of a set of files on btrfs
+ Compsize takes a list of files on a btrfs filesystem (recursing directories)
+ and measures used compression types and the effective compression ratio.
+ .
+ Because of partially used extents on one hand, and multiple reflinks to an
+ extent on the other, the definition of used space can be quite unintuitive.
+ This program provides answers at different stages:
+  * blocks on the disk
+  * uncompressed extents
+  * apparent file sizes (sans holes)
