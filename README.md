@@ -25,6 +25,7 @@ On the other hand, the space _used_ should be accurate (although obviously
 it can be shared with files outside our set).
 
 The fields are:
+ * Type: compression algorithm used; first row ("Data") is the total
  * Perc: disk usage/uncompressed -- ie, effective compression ratio
  * Disk Usage: blocks actually used on the disk
  * Uncompressed: extents before compression
