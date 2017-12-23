@@ -8,7 +8,7 @@ producing a report such as:
 [~]$ compsize /usr/share
 Processed 120101 files.
 Type       Perc     Disk Usage   Uncompressed
-Data        58%      1.1G         1.9G
+TOTAL       58%      1.1G         1.9G
 none       100%      351M         351M
 zlib        29%       41M         137M
 lzo         51%      776M         1.4G
