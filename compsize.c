@@ -179,6 +179,7 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
 
     init_sv2_args(st_ino, &sv2_args);
 
+again:
     if (ioctl(fd, BTRFS_IOC_TREE_SEARCH_V2, &sv2_args))
         die("SEARCH_V2: %m\n");
 
@@ -196,6 +197,14 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
         bp += sizeof(*head);
 
         parse_file_extent_item(bp, hlen, ws);
+    }
+
+    // Will be exactly 197379 (16MB/85) on overflow, but let's play it safe.
+    if (sv2_args.key.nr_items > 16384)
+    {
+        sv2_args.key.nr_items = -1;
+        sv2_args.key.min_offset = get_u64(&head->offset) + 1;
+        goto again;
     }
 }
 
