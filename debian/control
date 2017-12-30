@@ -2,8 +2,8 @@ Source: btrfs-compsize
 Section: admin
 Priority: optional
 Maintainer: Adam Borowski <kilobyte@angband.pl>
-Build-Depends: debhelper (>> 10), btrfs-progs
-Standards-Version: 4.1.1
+Build-Depends: debhelper (>> 11~), btrfs-progs
+Standards-Version: 4.1.3
 Rules-Requires-Root: no
 Homepage: http://github.com/kilobyte/compsize
 Vcs-Git: https://github.com/kilobyte/compsize.git -b debian
