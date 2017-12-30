@@ -53,6 +53,7 @@ struct workspace
 static const char *comp_types[MAX_ENTRIES] = { "none", "zlib", "lzo", "zstd" };
 
 static int opt_bytes = 0;
+static int opt_one_fs = 0;
 
 static void die(const char *txt, ...) __attribute__((format (printf, 1, 2)));
 static void die(const char *txt, ...)
@@ -198,7 +199,7 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
     }
 }
 
-static void do_recursive_search(const char *path, struct workspace *ws)
+static void do_recursive_search(const char *path, struct workspace *ws, const dev_t *dev)
 {
         int fd;
         int path_size;
@@ -224,6 +225,9 @@ static void do_recursive_search(const char *path, struct workspace *ws)
 
         if (fstat(fd, &st))
             die("stat(\"%s\"): %m\n", path);
+
+        if (opt_one_fs && dev != NULL && *dev != st.st_dev)
+            return;
 
         if (S_ISDIR(st.st_mode))
         {
@@ -251,7 +255,7 @@ static void do_recursive_search(const char *path, struct workspace *ws)
                     if (!strcmp(de->d_name, ".."))
                         continue;
                     snprintf(fn, path_size, "%s/%s", path, de->d_name);
-                    do_recursive_search(fn, ws);
+                    do_recursive_search(fn, ws, &st.st_dev);
             }
             free(fn);
             closedir(dir);
@@ -292,18 +296,23 @@ static void print_table(const char *type,
 
 static void parse_options(int argc, char **argv)
 {
+    static const char *short_options = "bx";
     static struct option long_options[] =
     {
         {"bytes",                  0, 0, 'b'},
+        {"one-file-system",        0, 0, 'x'},
         {0},
     };
 
     while (1)
     {
-        switch (getopt_long(argc, argv, "b", long_options, 0))
+        switch (getopt_long(argc, argv, short_options, long_options, 0))
         {
         case 'b':
             opt_bytes = 1;
+            break;
+        case 'x':
+            opt_one_fs = 1;
             break;
         case -1:
             return;
@@ -334,7 +343,7 @@ int main(int argc, char **argv)
     INIT_RADIX_TREE(&ws->seen_extents, 0);
 
     for (; argv[optind]; optind++)
-        do_recursive_search(argv[optind], ws);
+        do_recursive_search(argv[optind], ws, NULL);
 
     for (t=0; t<MAX_ENTRIES; t++)
     {

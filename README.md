@@ -35,5 +35,5 @@ The ioctl used requires root.
 # Installation:
 
 Besides regular C toolchain, you need btrfs userspace headers, usually
-installed as part of btrfs-progs.  Required kernel: 3.16, btrfs-progs: 3.18
-(untested!).
+installed as part of btrfs-progs; SuSE ships them inside libbtrfs-devel.
+Required kernel: 3.16, btrfs-progs: 3.18 (untested!).
