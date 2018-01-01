@@ -200,6 +200,9 @@ again:
     }
 
     // Will be exactly 197379 (16MB/85) on overflow, but let's play it safe.
+    // In theory, we're supposed to retry until getting 0, but RTFK says
+    // there are no short reads (just running out of buffer space), so we
+    // avoid having to search twice.
     if (sv2_args.key.nr_items > 16384)
     {
         sv2_args.key.nr_items = -1;
