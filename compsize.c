@@ -181,7 +181,12 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
 
 again:
     if (ioctl(fd, BTRFS_IOC_TREE_SEARCH_V2, &sv2_args))
-        die("SEARCH_V2: %m\n");
+    {
+        if (errno == ENOTTY)
+            die("Not btrfs (or SEARCH_V2 unsupported).\n");
+        else
+            die("SEARCH_V2: %m\n");
+    }
 
     nr_items = sv2_args.key.nr_items;
     DPRINTF("nr_items = %u\n", nr_items);
