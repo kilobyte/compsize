@@ -179,8 +179,14 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
 
     init_sv2_args(st_ino, &sv2_args);
 
+again:
     if (ioctl(fd, BTRFS_IOC_TREE_SEARCH_V2, &sv2_args))
-        die("SEARCH_V2: %m\n");
+    {
+        if (errno == ENOTTY)
+            die("Not btrfs (or SEARCH_V2 unsupported).\n");
+        else
+            die("SEARCH_V2: %m\n");
+    }
 
     nr_items = sv2_args.key.nr_items;
     DPRINTF("nr_items = %u\n", nr_items);
@@ -196,6 +202,17 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws)
         bp += sizeof(*head);
 
         parse_file_extent_item(bp, hlen, ws);
+    }
+
+    // Will be exactly 197379 (16MB/85) on overflow, but let's play it safe.
+    // In theory, we're supposed to retry until getting 0, but RTFK says
+    // there are no short reads (just running out of buffer space), so we
+    // avoid having to search twice.
+    if (sv2_args.key.nr_items > 16384)
+    {
+        sv2_args.key.nr_items = -1;
+        sv2_args.key.min_offset = get_u64(&head->offset) + 1;
+        goto again;
     }
 }
 
@@ -374,7 +391,7 @@ int main(int argc, char **argv)
     human_bytes(ws->disk_all, disk_usage);
     human_bytes(ws->uncomp_all, uncomp_usage);
     human_bytes(ws->refd_all, refd_usage);
-    print_table("Data", perc, disk_usage, uncomp_usage, refd_usage);
+    print_table("TOTAL", perc, disk_usage, uncomp_usage, refd_usage);
 
     for (t=0; t<MAX_ENTRIES; t++)
     {

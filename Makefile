@@ -22,3 +22,4 @@ clean:
 
 install:
 	install -Dm755 compsize $(PREFIX)/usr/bin/compsize
+	gzip -9n <compsize.8 >$(PREFIX)/usr/share/man/man8/compsize.8.gz

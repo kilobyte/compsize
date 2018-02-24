@@ -5,13 +5,13 @@ and measures used compression types and effective compression ratio,
 producing a report such as:
 
 ```
-[~]$ compsize /usr/share
-Processed 120101 files.
-Type       Perc     Disk Usage   Uncompressed
-Data        58%      1.1G         1.9G
-none       100%      351M         351M
-zlib        29%       41M         137M
-lzo         51%      776M         1.4G
+[~]$ compsize /home
+Processed 140058 files, 133128 regular extents (196786 refs), 80886 inline.
+Type       Perc     Disk Usage   Uncompressed Referenced
+TOTAL       93%       14G          15G          12G
+none       100%       13G          13G          10G
+zlib        41%      628M         1.4G         1.4G
+zstd        28%       42M         148M         148M
 ```
 
 A directory has no extents but has a (recursive) list of files.  A
@@ -25,6 +25,7 @@ On the other hand, the space _used_ should be accurate (although obviously
 it can be shared with files outside our set).
 
 The fields are:
+ * Type: compression algorithm used
  * Perc: disk usage/uncompressed -- ie, effective compression ratio
  * Disk Usage: blocks actually used on the disk
  * Uncompressed: extents before compression
