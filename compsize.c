@@ -106,7 +106,8 @@ static inline int is_inline_data(uint8_t type)
     return type == 0;
 }
 
-static void parse_file_extent_item(uint8_t *bp, uint32_t hlen, struct workspace *ws)
+static void parse_file_extent_item(uint8_t *bp, uint32_t hlen,
+                                   struct workspace *ws, const char *filename)
 {
     struct btrfs_file_extent_item *ei;
     uint64_t disk_num_bytes, ram_bytes, disk_bytenr, num_bytes;
@@ -139,7 +140,7 @@ static void parse_file_extent_item(uint8_t *bp, uint32_t hlen, struct workspace 
     }
 
     if (hlen != sizeof(*ei))
-        die("Regular extent's header not 53 bytes (%u) long?!?\n", hlen);
+        die("%s: Regular extent's header not 53 bytes (%u) long?!?\n", filename, hlen);
 
     disk_num_bytes = get_u64(&ei->disk_num_bytes);
     disk_bytenr = get_u64(&ei->disk_bytenr);
@@ -152,7 +153,7 @@ static void parse_file_extent_item(uint8_t *bp, uint32_t hlen, struct workspace 
          ram_bytes, comp_type, disk_num_bytes, disk_bytenr);
 
     if (!IS_ALIGNED(disk_bytenr, 1 << 12))
-        die("Extent not 4K-aligned at %"PRIu64"?!?\n", disk_bytenr);
+        die("%s: Extent not 4K-aligned at %"PRIu64"?!?\n", filename, disk_bytenr);
 
     disk_bytenr >>= 12;
     radix_tree_preload(GFP_KERNEL);
@@ -167,7 +168,7 @@ static void parse_file_extent_item(uint8_t *bp, uint32_t hlen, struct workspace 
     ws->nrefs++;
 }
 
-static void do_file(int fd, ino_t st_ino, struct workspace *ws)
+static void do_file(int fd, ino_t st_ino, struct workspace *ws, const char *filename)
 {
     static struct btrfs_sv2_args sv2_args;
     struct btrfs_ioctl_search_header *head;
@@ -183,9 +184,9 @@ again:
     if (ioctl(fd, BTRFS_IOC_TREE_SEARCH_V2, &sv2_args))
     {
         if (errno == ENOTTY)
-            die("Not btrfs (or SEARCH_V2 unsupported).\n");
+            die("%s: Not btrfs (or SEARCH_V2 unsupported).\n", filename);
         else
-            die("SEARCH_V2: %m\n");
+            die("%s: SEARCH_V2: %m\n", filename);
     }
 
     nr_items = sv2_args.key.nr_items;
@@ -201,7 +202,7 @@ again:
                 get_u32(&head->type), hlen);
         bp += sizeof(*head);
 
-        parse_file_extent_item(bp, hlen, ws);
+        parse_file_extent_item(bp, hlen, ws, filename);
     }
 
     // Will be exactly 197379 (16MB/85) on overflow, but let's play it safe.
@@ -279,7 +280,7 @@ static void do_recursive_search(const char *path, struct workspace *ws, const de
         }
 
         if (S_ISREG(st.st_mode))
-            do_file(fd, st.st_ino, ws);
+            do_file(fd, st.st_ino, ws, path);
 
         close(fd);
 }
