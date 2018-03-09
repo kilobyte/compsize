@@ -272,7 +272,9 @@ static void do_recursive_search(const char *path, struct workspace *ws, const de
                         continue;
                     if (!strcmp(de->d_name, ".."))
                         continue;
-                    snprintf(fn, path_size, "%s/%s", path, de->d_name);
+                    const char *slash = strrchr(path, '/');
+                    snprintf(fn, path_size, (slash && !slash[1]) ? "%s%s"
+                        : "%s/%s", path, de->d_name);
                     do_recursive_search(fn, ws, &st.st_dev);
             }
             free(fn);
