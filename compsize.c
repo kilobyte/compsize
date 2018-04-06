@@ -234,7 +234,12 @@ static void do_recursive_search(const char *path, struct workspace *ws, const de
              || errno == ENODEV   // /dev/ptmx
              || errno == ENOMEDIUM// more device nodes
              || errno == ENOENT)  // something just deleted
-                return;
+                return; // ignore, silently
+            else if (errno == EACCES)
+            {
+                fprintf(stderr, "%s: %m\n", path);
+                return; // warn
+            }
             else
                 die("open(\"%s\"): %m\n", path);
         }
