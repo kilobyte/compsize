@@ -1,3 +1,10 @@
+btrfs-compsize (1.1-1~bpo9+1) stretch-backports; urgency=medium
+
+  * Backport to stretch.
+  * Use dh 10.
+
+ -- Adam Borowski <kilobyte@angband.pl>  Sat, 07 Apr 2018 14:23:40 +0200
+
 btrfs-compsize (1.1-1) unstable; urgency=medium
 
   * New upstream release.
