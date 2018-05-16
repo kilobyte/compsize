@@ -1,3 +1,10 @@
+btrfs-compsize (1.1-1.1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Update build-dependencies to use the new libbtrfs-dev package.
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Wed, 16 May 2018 13:03:39 +0100
+
 btrfs-compsize (1.1-1) unstable; urgency=medium
 
   * New upstream release.
