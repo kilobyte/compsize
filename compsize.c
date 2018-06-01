@@ -54,6 +54,9 @@ static const char *comp_types[MAX_ENTRIES] = { "none", "zlib", "lzo", "zstd" };
 
 static int opt_bytes = 0;
 static int opt_one_fs = 0;
+static int sig_stats = 0;
+
+static int print_stats(struct workspace *ws);
 
 static void die(const char *txt, ...) __attribute__((format (printf, 1, 2)));
 static void die(const char *txt, ...)
@@ -64,6 +67,11 @@ static void die(const char *txt, ...)
     va_end(ap);
 
     exit(1);
+}
+
+static void sigusr1(int dummy)
+{
+    sig_stats = 1;
 }
 
 static uint64_t get_u64(const void *mem)
@@ -226,6 +234,12 @@ static void do_recursive_search(const char *path, struct workspace *ws, const de
         struct dirent *de;
         struct stat st;
 
+        if (sig_stats)
+        {
+            sig_stats = 0;
+            print_stats(ws);
+        }
+
         fd = open(path, O_RDONLY|O_NOFOLLOW|O_NOCTTY|O_NONBLOCK|__O_LARGEFILE);
         if (fd == -1)
         {
@@ -347,29 +361,13 @@ static void parse_options(int argc, char **argv)
     }
 }
 
-int main(int argc, char **argv)
+static int print_stats(struct workspace *ws)
 {
     char perc[8], disk_usage[HB], uncomp_usage[HB], refd_usage[HB];
-    struct workspace *ws;
     uint32_t percentage;
     int t;
 
-    ws = (struct workspace *) calloc(sizeof(*ws), 1);
-
-    parse_options(argc, argv);
-
-    if (optind >= argc)
-    {
-        fprintf(stderr, "Usage: compsize file-or-dir1 [file-or-dir2 ...]\n");
-        return 1;
-    }
-
-    radix_tree_init();
-    INIT_RADIX_TREE(&ws->seen_extents, 0);
-
-    for (; argv[optind]; optind++)
-        do_recursive_search(argv[optind], ws, NULL);
-
+    ws->uncomp_all = ws->disk_all = ws->refd_all = 0;
     for (t=0; t<MAX_ENTRIES; t++)
     {
             ws->uncomp_all += ws->uncomp[t];
@@ -420,7 +418,33 @@ int main(int argc, char **argv)
         print_table(ct, perc, disk_usage, uncomp_usage, refd_usage);
     }
 
+    return 0;
+}
+
+int main(int argc, char **argv)
+{
+    struct workspace *ws;
+
+    ws = (struct workspace *) calloc(sizeof(*ws), 1);
+
+    parse_options(argc, argv);
+
+    if (optind >= argc)
+    {
+        fprintf(stderr, "Usage: compsize file-or-dir1 [file-or-dir2 ...]\n");
+        return 1;
+    }
+
+    radix_tree_init();
+    INIT_RADIX_TREE(&ws->seen_extents, 0);
+    signal(SIGUSR1, sigusr1);
+
+    for (; argv[optind]; optind++)
+        do_recursive_search(argv[optind], ws, NULL);
+
+    int ret = print_stats(ws);
+
     free(ws);
 
-    return 0;
+    return ret;
 }
