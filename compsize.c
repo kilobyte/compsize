@@ -54,6 +54,9 @@ static const char *comp_types[MAX_ENTRIES] = { "none", "zlib", "lzo", "zstd" };
 
 static int opt_bytes = 0;
 static int opt_one_fs = 0;
+static int sig_stats = 0;
+
+static int print_stats(struct workspace *ws);
 
 static void die(const char *txt, ...) __attribute__((format (printf, 1, 2)));
 static void die(const char *txt, ...)
@@ -64,6 +67,11 @@ static void die(const char *txt, ...)
     va_end(ap);
 
     exit(1);
+}
+
+static void sigusr1(int dummy)
+{
+    sig_stats = 1;
 }
 
 static uint64_t get_u64(const void *mem)
@@ -106,7 +114,8 @@ static inline int is_inline_data(uint8_t type)
     return type == 0;
 }
 
-static void parse_file_extent_item(uint8_t *bp, uint32_t hlen, struct workspace *ws)
+static void parse_file_extent_item(uint8_t *bp, uint32_t hlen,
+                                   struct workspace *ws, const char *filename)
 {
     struct btrfs_file_extent_item *ei;
     uint64_t disk_num_bytes, ram_bytes, disk_bytenr, num_bytes;
@@ -139,7 +148,7 @@ static void parse_file_extent_item(uint8_t *bp, uint32_t hlen, struct workspace 
     }
 
     if (hlen != sizeof(*ei))
-        die("Regular extent's header not 53 bytes (%u) long?!?\n", hlen);
+        die("%s: Regular extent's header not 53 bytes (%u) long?!?\n", filename, hlen);
 
     disk_num_bytes = get_u64(&ei->disk_num_bytes);
     disk_bytenr = get_u64(&ei->disk_bytenr);
@@ -152,7 +161,7 @@ static void parse_file_extent_item(uint8_t *bp, uint32_t hlen, struct workspace 
          ram_bytes, comp_type, disk_num_bytes, disk_bytenr);
 
     if (!IS_ALIGNED(disk_bytenr, 1 << 12))
-        die("Extent not 4K-aligned at %"PRIu64"?!?\n", disk_bytenr);
+        die("%s: Extent not 4K-aligned at %"PRIu64"?!?\n", filename, disk_bytenr);
 
     disk_bytenr >>= 12;
     radix_tree_preload(GFP_KERNEL);
@@ -167,7 +176,7 @@ static void parse_file_extent_item(uint8_t *bp, uint32_t hlen, struct workspace 
     ws->nrefs++;
 }
 
-static void do_file(int fd, ino_t st_ino, struct workspace *ws)
+static void do_file(int fd, ino_t st_ino, struct workspace *ws, const char *filename)
 {
     static struct btrfs_sv2_args sv2_args;
     struct btrfs_ioctl_search_header *head;
@@ -183,9 +192,9 @@ again:
     if (ioctl(fd, BTRFS_IOC_TREE_SEARCH_V2, &sv2_args))
     {
         if (errno == ENOTTY)
-            die("Not btrfs (or SEARCH_V2 unsupported).\n");
+            die("%s: Not btrfs (or SEARCH_V2 unsupported).\n", filename);
         else
-            die("SEARCH_V2: %m\n");
+            die("%s: SEARCH_V2: %m\n", filename);
     }
 
     nr_items = sv2_args.key.nr_items;
@@ -201,7 +210,7 @@ again:
                 get_u32(&head->type), hlen);
         bp += sizeof(*head);
 
-        parse_file_extent_item(bp, hlen, ws);
+        parse_file_extent_item(bp, hlen, ws, filename);
     }
 
     // Will be exactly 197379 (16MB/85) on overflow, but let's play it safe.
@@ -225,6 +234,12 @@ static void do_recursive_search(const char *path, struct workspace *ws, const de
         struct dirent *de;
         struct stat st;
 
+        if (sig_stats)
+        {
+            sig_stats = 0;
+            print_stats(ws);
+        }
+
         fd = open(path, O_RDONLY|O_NOFOLLOW|O_NOCTTY|O_NONBLOCK|__O_LARGEFILE);
         if (fd == -1)
         {
@@ -233,7 +248,12 @@ static void do_recursive_search(const char *path, struct workspace *ws, const de
              || errno == ENODEV   // /dev/ptmx
              || errno == ENOMEDIUM// more device nodes
              || errno == ENOENT)  // something just deleted
-                return;
+                return; // ignore, silently
+            else if (errno == EACCES)
+            {
+                fprintf(stderr, "%s: %m\n", path);
+                return; // warn
+            }
             else
                 die("open(\"%s\"): %m\n", path);
         }
@@ -271,7 +291,9 @@ static void do_recursive_search(const char *path, struct workspace *ws, const de
                         continue;
                     if (!strcmp(de->d_name, ".."))
                         continue;
-                    snprintf(fn, path_size, "%s/%s", path, de->d_name);
+                    const char *slash = strrchr(path, '/');
+                    snprintf(fn, path_size, (slash && !slash[1]) ? "%s%s"
+                        : "%s/%s", path, de->d_name);
                     do_recursive_search(fn, ws, &st.st_dev);
             }
             free(fn);
@@ -279,7 +301,7 @@ static void do_recursive_search(const char *path, struct workspace *ws, const de
         }
 
         if (S_ISREG(st.st_mode))
-            do_file(fd, st.st_ino, ws);
+            do_file(fd, st.st_ino, ws, path);
 
         close(fd);
 }
@@ -339,29 +361,13 @@ static void parse_options(int argc, char **argv)
     }
 }
 
-int main(int argc, char **argv)
+static int print_stats(struct workspace *ws)
 {
     char perc[8], disk_usage[HB], uncomp_usage[HB], refd_usage[HB];
-    struct workspace *ws;
     uint32_t percentage;
     int t;
 
-    ws = (struct workspace *) calloc(sizeof(*ws), 1);
-
-    parse_options(argc, argv);
-
-    if (optind >= argc)
-    {
-        fprintf(stderr, "Usage: compsize file-or-dir1 [file-or-dir2 ...]\n");
-        return 1;
-    }
-
-    radix_tree_init();
-    INIT_RADIX_TREE(&ws->seen_extents, 0);
-
-    for (; argv[optind]; optind++)
-        do_recursive_search(argv[optind], ws, NULL);
-
+    ws->uncomp_all = ws->disk_all = ws->refd_all = 0;
     for (t=0; t<MAX_ENTRIES; t++)
     {
             ws->uncomp_all += ws->uncomp[t];
@@ -412,7 +418,33 @@ int main(int argc, char **argv)
         print_table(ct, perc, disk_usage, uncomp_usage, refd_usage);
     }
 
+    return 0;
+}
+
+int main(int argc, char **argv)
+{
+    struct workspace *ws;
+
+    ws = (struct workspace *) calloc(sizeof(*ws), 1);
+
+    parse_options(argc, argv);
+
+    if (optind >= argc)
+    {
+        fprintf(stderr, "Usage: compsize file-or-dir1 [file-or-dir2 ...]\n");
+        return 1;
+    }
+
+    radix_tree_init();
+    INIT_RADIX_TREE(&ws->seen_extents, 0);
+    signal(SIGUSR1, sigusr1);
+
+    for (; argv[optind]; optind++)
+        do_recursive_search(argv[optind], ws, NULL);
+
+    int ret = print_stats(ws);
+
     free(ws);
 
-    return 0;
+    return ret;
 }
