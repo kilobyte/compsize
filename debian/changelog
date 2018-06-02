@@ -1,3 +1,9 @@
+btrfs-compsize (1.2-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Adam Borowski <kilobyte@angband.pl>  Sat, 02 Jun 2018 19:04:27 +0200
+
 btrfs-compsize (1.1-2) unstable; urgency=medium
 
   [ Dimitri John Ledkov ]
