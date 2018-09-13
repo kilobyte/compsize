@@ -5,7 +5,7 @@ Maintainer: Adam Borowski <kilobyte@angband.pl>
 Build-Depends: debhelper (>> 11~), libbtrfs-dev | btrfs-progs (<< 4.16.1~)
 Standards-Version: 4.1.4
 Rules-Requires-Root: no
-Homepage: http://github.com/kilobyte/compsize
+Homepage: https://github.com/kilobyte/compsize
 Vcs-Git: https://github.com/kilobyte/compsize.git -b debian
 Vcs-Browser: https://github.com/kilobyte/compsize/tree/debian
 
