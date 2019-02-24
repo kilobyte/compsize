@@ -13,6 +13,7 @@
 #include <inttypes.h>
 #include <linux/limits.h>
 #include <getopt.h>
+#include <signal.h>
 #include "radix-tree.h"
 #include "endianness.h"
 
