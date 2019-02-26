@@ -1,8 +1,9 @@
-btrfs-compsize (1.2-2) UNRELEASED; urgency=medium
+btrfs-compsize (1.3-1) unstable; urgency=medium
 
+  * New upstream release.
   * Use secure URI in Homepage field.
 
- -- Jelmer Vernooĳ <jelmer@debian.org>  Thu, 13 Sep 2018 13:58:35 +0100
+ -- Adam Borowski <kilobyte@angband.pl>  Tue, 26 Feb 2019 13:35:44 +0100
 
 btrfs-compsize (1.2-1) unstable; urgency=medium
 
