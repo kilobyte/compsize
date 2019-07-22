@@ -1,3 +1,5 @@
 compsize
 *.o
 *~
+/.pc
+/debian/patches
