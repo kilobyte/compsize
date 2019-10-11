@@ -1,4 +1,4 @@
-PREFIX ?= /
+PREFIX ?= /usr
 CC ?= gcc
 CFLAGS ?= -Wall -std=gnu90
 SRC_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
@@ -21,12 +21,12 @@ $(SRC_DIR)/%.o: $(SRC_DIR)/%.c
 $(BIN): $(OBJ_FILES)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
-BIN_I := $(PREFIX)/usr/bin/compsize
+BIN_I := $(PREFIX)/bin/compsize
 
 $(BIN_I): $(BIN)
 	install -Dm755 $< $@
 
-MAN_I := $(PREFIX)/usr/share/man/man8/compsize.8.gz
+MAN_I := $(PREFIX)/share/man/man8/compsize.8.gz
 
 $(MAN_I): $(SRC_DIR)/compsize.8
 	gzip -9n < $< > $@
