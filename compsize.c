@@ -23,8 +23,9 @@
     #define DPRINTF(fmt, args...)
 #endif
 
-// We recognize yet-unknown compression types (u8).
-#define MAX_ENTRIES 256
+// We recognize yet-unknown compression types (u8), plus token for prealloc.
+#define MAX_ENTRIES (256+1)
+#define PREALLOC 256
 
 #ifndef SZ_16M
  // old kernel headers
@@ -116,7 +117,7 @@ static void parse_file_extent_item(uint8_t *bp, uint32_t hlen,
     struct btrfs_file_extent_item *ei;
     uint64_t disk_num_bytes, ram_bytes, disk_bytenr, num_bytes;
     uint32_t inline_header_sz;
-    uint8_t  comp_type;
+    unsigned  comp_type;
 
     DPRINTF("len=%u\n", hlen);
 
@@ -142,6 +143,9 @@ static void parse_file_extent_item(uint8_t *bp, uint32_t hlen,
         ws->ninline++;
         return;
     }
+
+    if (ei->type == BTRFS_FILE_EXTENT_PREALLOC)
+        comp_type = PREALLOC;
 
     if (hlen != sizeof(*ei))
         die("%s: Regular extent's header not 53 bytes (%u) long?!?\n", filename, hlen);
@@ -399,7 +403,7 @@ static int print_stats(struct workspace *ws)
     {
         if (!ws->uncomp[t])
             continue;
-        const char *ct = comp_types[t];
+        const char *ct = t==PREALLOC? "prealloc" : comp_types[t];
         char unkn_comp[12];
         percentage = ws->disk[t]*100/ws->uncomp[t];
         snprintf(perc, sizeof(perc), "%3u%%", percentage);
