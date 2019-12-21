@@ -110,11 +110,6 @@ static inline int is_hole(uint64_t disk_bytenr)
     return disk_bytenr == 0;
 }
 
-static inline int is_inline_data(uint8_t type)
-{
-    return type == 0;
-}
-
 static void parse_file_extent_item(uint8_t *bp, uint32_t hlen,
                                    struct workspace *ws, const char *filename)
 {
@@ -130,7 +125,7 @@ static void parse_file_extent_item(uint8_t *bp, uint32_t hlen,
     ram_bytes = get_u64(&ei->ram_bytes);
     comp_type = ei->compression;
 
-    if (is_inline_data(ei->type))
+    if (ei->type == BTRFS_FILE_EXTENT_INLINE)
     {
         inline_header_sz  = sizeof(*ei);
         inline_header_sz -= sizeof(ei->disk_bytenr);
