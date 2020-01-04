@@ -323,13 +323,24 @@ static void human_bytes(uint64_t x, char *output)
         snprintf(output, HB, "%4"PRIu64"%c", x, units[u]);
 }
 
+static void print_table_with_comp_level(const char *type,
+                                        const int  comp_level,
+                                        const char *percentage,
+                                        const char *disk_usage,
+                                        const char *uncomp_usage,
+                                        const char *refd_usage)
+{
+        printf("%s:%-2d %-4s %-8s %-12s %-12s %-12s\n", type, comp_level, "",
+               percentage, disk_usage, uncomp_usage, refd_usage);
+}
+
 static void print_table(const char *type,
                         const char *percentage,
                         const char *disk_usage,
                         const char *uncomp_usage,
                         const char *refd_usage)
 {
-        printf("%-10s %-8s %-12s %-12s %-12s\n", type, percentage,
+        printf("%-10s   %-8s %-12s %-12s %-12s\n", type, percentage,
                disk_usage, uncomp_usage, refd_usage);
 }
 
@@ -403,7 +414,8 @@ static int print_stats(struct workspace *ws)
     {
         if (!ws->uncomp[t])
             continue;
-        const char *ct = t==PREALLOC? "prealloc" : comp_types[t];
+        const char *ct = t==PREALLOC? "prealloc" : comp_types[t & 0xF];
+        int comp_level = t >> 4 == 0 ? 3 : t >> 4;
         char unkn_comp[12];
         percentage = ws->disk[t]*100/ws->uncomp[t];
         snprintf(perc, sizeof(perc), "%3u%%", percentage);
@@ -415,7 +427,7 @@ static int print_stats(struct workspace *ws)
             snprintf(unkn_comp, sizeof(unkn_comp), "?%u", t);
             ct = unkn_comp;
         }
-        print_table(ct, perc, disk_usage, uncomp_usage, refd_usage);
+        print_table_with_comp_level(ct, comp_level, perc, disk_usage, uncomp_usage, refd_usage);
     }
 
     return 0;
