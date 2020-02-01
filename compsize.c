@@ -333,13 +333,28 @@ static void print_table(const char *type,
                disk_usage, uncomp_usage, refd_usage);
 }
 
+static void print_help(void)
+{
+        fprintf(stderr,
+		"Usage: compsize [options] file-or-dir1 [file-or-dir2 ...]\n"
+		"\n"
+		"Options:\n"
+		"\n"
+		"    -h, --help              print this help message and exit\n"
+		"    -b, --bytes             display raw bytes instead of human-readable sizes\n"
+		"    -x, --one-file-system   don't cross filesystem boundaries\n"
+		"\n"
+	);
+}
+
 static void parse_options(int argc, char **argv)
 {
-    static const char *short_options = "bx";
+    static const char *short_options = "bxh";
     static struct option long_options[] =
     {
         {"bytes",                  0, 0, 'b'},
         {"one-file-system",        0, 0, 'x'},
+        {"help",                   0, 0, 'h'},
         {0},
     };
 
@@ -353,6 +368,10 @@ static void parse_options(int argc, char **argv)
         case 'x':
             opt_one_fs = 1;
             break;
+        case 'h':
+            print_help();
+            exit(0);
+            break; // unreachable
         case -1:
             return;
         default:
@@ -431,7 +450,7 @@ int main(int argc, char **argv)
 
     if (optind >= argc)
     {
-        fprintf(stderr, "Usage: compsize file-or-dir1 [file-or-dir2 ...]\n");
+        print_help();
         return 1;
     }
 
