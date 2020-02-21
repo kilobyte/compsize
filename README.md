@@ -32,8 +32,19 @@ The fields are:
  * Referenced: apparent size of files (minus holes)
 
 The ioctl used requires root.
+# Installation distributions repositories:
+The recommended way to install compsize is via distributions repositories official repositories
 
-# Installation:
+## Debian/Ubuntu example:
+````bash
+sudo apt install btrfs-compsize
+````
+To run:
+````bash
+sudo compsize .
+````
+
+# Installation from source:
 
 Besides regular C toolchain, you need btrfs userspace headers.  On Debian
 (incl. derivatives like Ubuntu) they're in libbtrfs-dev, SuSE ships them
@@ -45,6 +56,7 @@ Required kernel: 3.16, btrfs-progs: 3.18 (untested!).
 
 ````bash
 git clone git@github.com:kilobyte/compsize.git
+sudo apt install libbtrfs-dev
 cd compsize
 make
 sudo cp compsize /bin/
