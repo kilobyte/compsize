@@ -59,9 +59,8 @@ git clone git@github.com:kilobyte/compsize.git
 sudo apt install libbtrfs-dev
 cd compsize
 make
-sudo cp compsize /bin/
 ````
 To run:
 ````bash
-sudo compsize .
+sudo ./compsize .
 ````
