@@ -338,8 +338,10 @@ static void print_help(void)
         fprintf(stderr,
 		"Usage: compsize [options] file-or-dir1 [file-or-dir2 ...]\n"
 		"\n"
-		"Options:\n"
+		"Compsize displays total space used by set of files, taking into account\n"
+		"compression, reflinks, partially overwritten extents.\n"
 		"\n"
+		"Options:\n"
 		"    -h, --help              print this help message and exit\n"
 		"    -b, --bytes             display raw bytes instead of human-readable sizes\n"
 		"    -x, --one-file-system   don't cross filesystem boundaries\n"
