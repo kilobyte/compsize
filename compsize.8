@@ -11,10 +11,8 @@ compsize \- calculate compression ratio of a set of files on btrfs
 .B compsize
 takes a list of files on a btrfs filesystem (recursing directories)
 and measures used compression types and the effective compression ratio.
-.P
-As talking about compression ratio for a partial extent doesn't quite make
-any sense, every used extent is considered in its entirety.  Every extent
-is also counted exactly once, even if it's reflinked multiple times.
+Besides compression, \fBcompsize\fR shows the effect of reflinks (\fIcp
+--reflink\fR, snapshots, deduplication), and certain types of btrfs waste.
 .P
 The program gives a report similar to:
 .br

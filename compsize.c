@@ -23,8 +23,9 @@
     #define DPRINTF(fmt, args...)
 #endif
 
-// We recognize yet-unknown compression types (u8).
-#define MAX_ENTRIES 256
+// We recognize yet-unknown compression types (u8), plus token for prealloc.
+#define MAX_ENTRIES (256+1)
+#define PREALLOC 256
 
 #ifndef SZ_16M
  // old kernel headers
@@ -110,18 +111,13 @@ static inline int is_hole(uint64_t disk_bytenr)
     return disk_bytenr == 0;
 }
 
-static inline int is_inline_data(uint8_t type)
-{
-    return type == 0;
-}
-
 static void parse_file_extent_item(uint8_t *bp, uint32_t hlen,
                                    struct workspace *ws, const char *filename)
 {
     struct btrfs_file_extent_item *ei;
     uint64_t disk_num_bytes, ram_bytes, disk_bytenr, num_bytes;
     uint32_t inline_header_sz;
-    uint8_t  comp_type;
+    unsigned  comp_type;
 
     DPRINTF("len=%u\n", hlen);
 
@@ -130,7 +126,7 @@ static void parse_file_extent_item(uint8_t *bp, uint32_t hlen,
     ram_bytes = get_u64(&ei->ram_bytes);
     comp_type = ei->compression;
 
-    if (is_inline_data(ei->type))
+    if (ei->type == BTRFS_FILE_EXTENT_INLINE)
     {
         inline_header_sz  = sizeof(*ei);
         inline_header_sz -= sizeof(ei->disk_bytenr);
@@ -147,6 +143,9 @@ static void parse_file_extent_item(uint8_t *bp, uint32_t hlen,
         ws->ninline++;
         return;
     }
+
+    if (ei->type == BTRFS_FILE_EXTENT_PREALLOC)
+        comp_type = PREALLOC;
 
     if (hlen != sizeof(*ei))
         die("%s: Regular extent's header not 53 bytes (%u) long?!?\n", filename, hlen);
@@ -334,13 +333,30 @@ static void print_table(const char *type,
                disk_usage, uncomp_usage, refd_usage);
 }
 
+static void print_help(void)
+{
+        fprintf(stderr,
+		"Usage: compsize [options] file-or-dir1 [file-or-dir2 ...]\n"
+		"\n"
+		"Compsize displays total space used by set of files, taking into account\n"
+		"compression, reflinks, partially overwritten extents.\n"
+		"\n"
+		"Options:\n"
+		"    -h, --help              print this help message and exit\n"
+		"    -b, --bytes             display raw bytes instead of human-readable sizes\n"
+		"    -x, --one-file-system   don't cross filesystem boundaries\n"
+		"\n"
+	);
+}
+
 static void parse_options(int argc, char **argv)
 {
-    static const char *short_options = "bx";
+    static const char *short_options = "bxh";
     static struct option long_options[] =
     {
         {"bytes",                  0, 0, 'b'},
         {"one-file-system",        0, 0, 'x'},
+        {"help",                   0, 0, 'h'},
         {0},
     };
 
@@ -354,6 +370,10 @@ static void parse_options(int argc, char **argv)
         case 'x':
             opt_one_fs = 1;
             break;
+        case 'h':
+            print_help();
+            exit(0);
+            break; // unreachable
         case -1:
             return;
         default:
@@ -404,7 +424,7 @@ static int print_stats(struct workspace *ws)
     {
         if (!ws->uncomp[t])
             continue;
-        const char *ct = comp_types[t];
+        const char *ct = t==PREALLOC? "prealloc" : comp_types[t];
         char unkn_comp[12];
         percentage = ws->disk[t]*100/ws->uncomp[t];
         snprintf(perc, sizeof(perc), "%3u%%", percentage);
@@ -432,7 +452,7 @@ int main(int argc, char **argv)
 
     if (optind >= argc)
     {
-        fprintf(stderr, "Usage: compsize file-or-dir1 [file-or-dir2 ...]\n");
+        print_help();
         return 1;
     }
 
