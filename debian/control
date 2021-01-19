@@ -3,7 +3,7 @@ Section: admin
 Priority: optional
 Maintainer: Adam Borowski <kilobyte@angband.pl>
 Build-Depends: debhelper-compat (=12), libbtrfs-dev
-Standards-Version: 4.4.0
+Standards-Version: 4.5.1
 Rules-Requires-Root: no
 Homepage: https://github.com/kilobyte/compsize
 Vcs-Git: https://github.com/kilobyte/compsize.git -b debian
