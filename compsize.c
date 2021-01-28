@@ -93,7 +93,7 @@ static uint32_t get_u32(const void *mem)
 static void init_sv2_args(ino_t st_ino, struct btrfs_sv2_args *sv2_args)
 {
         sv2_args->key.tree_id = 0;
-        sv2_args->key.max_objectid = st_ino;
+        sv2_args->key.max_objectid = st_ino + 1;
         sv2_args->key.min_objectid = st_ino;
         sv2_args->key.min_offset = 0;
         sv2_args->key.max_offset = -1;
@@ -198,12 +198,18 @@ again:
     }
 
     nr_items = sv2_args.key.nr_items;
+    if (!nr_items)
+        return;
     DPRINTF("nr_items = %u\n", nr_items);
 
     bp = sv2_args.buf;
     for (; nr_items > 0; nr_items--, bp += hlen)
     {
         head = (struct btrfs_ioctl_search_header*)bp;
+
+        if (head->objectid > st_ino)
+            return;
+
         hlen = get_u32(&head->len);
         DPRINTF("{ transid=%lu objectid=%lu offset=%lu type=%u len=%u }\n",
                 get_u64(&head->transid), get_u64(&head->objectid), get_u64(&head->offset),
@@ -213,16 +219,10 @@ again:
         parse_file_extent_item(bp, hlen, ws, filename);
     }
 
-    // Will be exactly 197379 (16MB/85) on overflow, but let's play it safe.
-    // In theory, we're supposed to retry until getting 0, but RTFK says
-    // there are no short reads (just running out of buffer space), so we
-    // avoid having to search twice.
-    if (sv2_args.key.nr_items > 512)
-    {
-        sv2_args.key.nr_items = -1;
-        sv2_args.key.min_offset = get_u64(&head->offset) + 1;
-        goto again;
-    }
+    // We exhausted buffer space, continue.
+    sv2_args.key.nr_items = -1;
+    sv2_args.key.min_offset = get_u64(&head->offset) + 1;
+    goto again;
 }
 
 static void do_recursive_search(const char *path, struct workspace *ws, const dev_t *dev)
