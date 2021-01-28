@@ -36,7 +36,7 @@ struct btrfs_sv2_args
 {
     struct btrfs_ioctl_search_key key;
     uint64_t buf_size;
-    uint8_t  buf[SZ_16M]; // hardcoded kernel's limit
+    uint8_t  buf[65536]; // hardcoded kernel's limit is 16MB
 };
 
 struct workspace
@@ -217,7 +217,7 @@ again:
     // In theory, we're supposed to retry until getting 0, but RTFK says
     // there are no short reads (just running out of buffer space), so we
     // avoid having to search twice.
-    if (sv2_args.key.nr_items > 16384)
+    if (sv2_args.key.nr_items > 512)
     {
         sv2_args.key.nr_items = -1;
         sv2_args.key.min_offset = get_u64(&head->offset) + 1;
