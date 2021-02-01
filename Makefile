@@ -21,12 +21,12 @@ $(SRC_DIR)/%.o: $(SRC_DIR)/%.c
 $(BIN): $(OBJ_FILES)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
-BIN_I := $(PREFIX)/bin/compsize
+BIN_I := $(DESTDIR)$(PREFIX)/bin/compsize
 
 $(BIN_I): $(BIN)
 	install -Dm755 $< $@
 
-MAN_I := $(PREFIX)/share/man/man8/compsize.8.gz
+MAN_I := $(DESTDIR)$(PREFIX)/share/man/man8/compsize.8.gz
 
 $(MAN_I): $(SRC_DIR)/compsize.8
 	gzip -9n < $< > $@
