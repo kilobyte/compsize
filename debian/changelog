@@ -1,3 +1,9 @@
+btrfs-compsize (1.5-1) unstable; urgency=medium
+
+  * New upstream release (with a massive speed increase!).
+
+ -- Adam Borowski <kilobyte@angband.pl>  Mon, 08 Feb 2021 00:08:56 +0100
+
 btrfs-compsize (1.4-1) unstable; urgency=medium
 
   * New upstream release.
