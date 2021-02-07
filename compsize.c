@@ -36,7 +36,7 @@ struct btrfs_sv2_args
 {
     struct btrfs_ioctl_search_key key;
     uint64_t buf_size;
-    uint8_t  buf[SZ_16M]; // hardcoded kernel's limit
+    uint8_t  buf[65536]; // hardcoded kernel's limit is 16MB
 };
 
 struct workspace
@@ -217,7 +217,7 @@ again:
     // In theory, we're supposed to retry until getting 0, but RTFK says
     // there are no short reads (just running out of buffer space), so we
     // avoid having to search twice.
-    if (sv2_args.key.nr_items > 16384)
+    if (sv2_args.key.nr_items > 512)
     {
         sv2_args.key.nr_items = -1;
         sv2_args.key.min_offset = get_u64(&head->offset) + 1;
@@ -405,12 +405,10 @@ static int print_stats(struct workspace *ws)
         return 1;
     }
 
-    if (ws->nfiles > 1)
-    {
-        printf("Processed %"PRIu64" files, %"PRIu64" regular extents "
-               "(%"PRIu64" refs), %"PRIu64" inline.\n",
-               ws->nfiles, ws->nextents, ws->nrefs, ws->ninline);
-    }
+    printf("Processed %"PRIu64" file%s, %"PRIu64" regular extents "
+           "(%"PRIu64" refs), %"PRIu64" inline.\n",
+           ws->nfiles, ws->nfiles>1 ? "s" : "",
+           ws->nextents, ws->nrefs, ws->ninline);
 
     print_table("Type", "Perc", "Disk Usage", "Uncompressed", "Referenced");
     percentage = ws->disk_all*100/ws->uncomp_all;
