@@ -405,12 +405,10 @@ static int print_stats(struct workspace *ws)
         return 1;
     }
 
-    if (ws->nfiles > 1)
-    {
-        printf("Processed %"PRIu64" files, %"PRIu64" regular extents "
-               "(%"PRIu64" refs), %"PRIu64" inline.\n",
-               ws->nfiles, ws->nextents, ws->nrefs, ws->ninline);
-    }
+    printf("Processed %"PRIu64" file%s, %"PRIu64" regular extents "
+           "(%"PRIu64" refs), %"PRIu64" inline.\n",
+           ws->nfiles, ws->nfiles>1 ? "s" : "",
+           ws->nextents, ws->nrefs, ws->ninline);
 
     print_table("Type", "Perc", "Disk Usage", "Uncompressed", "Referenced");
     percentage = ws->disk_all*100/ws->uncomp_all;
