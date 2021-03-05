@@ -29,6 +29,7 @@ $(BIN_I): $(BIN)
 MAN_I := $(DESTDIR)$(PREFIX)/share/man/man8/compsize.8.gz
 
 $(MAN_I): $(SRC_DIR)/compsize.8
+	mkdir -p "$$(dirname "$@")"
 	gzip -9n < $< > $@
 
 install: $(BIN_I) $(MAN_I)
