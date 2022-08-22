@@ -48,7 +48,8 @@ struct workspace
         uint64_t uncomp_all;
         uint64_t refd_all;
         uint64_t nfiles;
-        uint64_t nextents, nrefs, ninline;
+        uint64_t nextents, nrefs, ninline, nfrag;
+        uint64_t fragend;
         struct radix_tree_root seen_extents;
 };
 
@@ -141,6 +142,8 @@ static void parse_file_extent_item(uint8_t *bp, uint32_t hlen,
         ws->uncomp[comp_type] += ram_bytes;
         ws->refd[comp_type] += ram_bytes;
         ws->ninline++;
+        ws->nfrag++;
+        ws->fragend = -1;
         return;
     }
 
@@ -174,6 +177,10 @@ static void parse_file_extent_item(uint8_t *bp, uint32_t hlen,
     radix_tree_preload_end();
     ws->refd[comp_type] += num_bytes;
     ws->nrefs++;
+
+    if (disk_bytenr != ws->fragend)
+        ws->nfrag++;
+    ws->fragend = disk_bytenr + disk_num_bytes;
 }
 
 static void do_file(int fd, ino_t st_ino, struct workspace *ws, const char *filename)
@@ -185,6 +192,7 @@ static void do_file(int fd, ino_t st_ino, struct workspace *ws, const char *file
 
     DPRINTF("inode = %" PRIu64"\n", st_ino);
     ws->nfiles++;
+    ws->fragend = -1;
 
     init_sv2_args(st_ino, &sv2_args);
 
@@ -406,9 +414,9 @@ static int print_stats(struct workspace *ws)
     }
 
     printf("Processed %"PRIu64" file%s, %"PRIu64" regular extents "
-           "(%"PRIu64" refs), %"PRIu64" inline.\n",
+           "(%"PRIu64" refs), %"PRIu64" inline, %"PRIu64" fragments.\n",
            ws->nfiles, ws->nfiles>1 ? "s" : "",
-           ws->nextents, ws->nrefs, ws->ninline);
+           ws->nextents, ws->nrefs, ws->ninline, ws->nfrag);
 
     print_table("Type", "Perc", "Disk Usage", "Uncompressed", "Referenced");
     percentage = ws->disk_all*100/ws->uncomp_all;
