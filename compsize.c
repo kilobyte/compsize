@@ -166,9 +166,9 @@ static void parse_file_extent_item(uint8_t *bp, uint32_t hlen,
     if (!IS_ALIGNED(disk_bytenr, 1 << 12))
         die("%s: Extent not 4K-aligned at %"PRIu64"?!?\n", filename, disk_bytenr);
 
-    disk_bytenr >>= 12;
+    unsigned long pageno = disk_bytenr >> 12;
     radix_tree_preload(GFP_KERNEL);
-    if (radix_tree_insert(&ws->seen_extents, disk_bytenr, (void *)disk_bytenr) == 0)
+    if (radix_tree_insert(&ws->seen_extents, pageno, (void *)pageno) == 0)
     {
          ws->disk[comp_type] += disk_num_bytes;
          ws->uncomp[comp_type] += ram_bytes;
