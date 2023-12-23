@@ -77,20 +77,6 @@ static void sigusr1(int dummy)
     sig_stats = 1;
 }
 
-static uint64_t get_u64(const void *mem)
-{
-    typedef struct __attribute__((__packed__)) { uint64_t v; } u64_unal;
-    uint64_t bad_endian = ((u64_unal*)mem)->v;
-    return htole64(bad_endian);
-}
-
-static uint32_t get_u32(const void *mem)
-{
-    typedef struct __attribute__((__packed__)) { uint32_t v; } u32_unal;
-    uint32_t bad_endian = ((u32_unal*)mem)->v;
-    return htole32(bad_endian);
-}
-
 static void init_sv2_args(ino_t st_ino, struct btrfs_sv2_args *sv2_args)
 {
         sv2_args->key.tree_id = 0;
@@ -124,7 +110,7 @@ static void parse_file_extent_item(uint8_t *bp, uint32_t hlen,
 
     ei = (struct btrfs_file_extent_item *) bp;
 
-    ram_bytes = get_u64(&ei->ram_bytes);
+    ram_bytes = get_unaligned_le64(&ei->ram_bytes);
     comp_type = ei->compression;
 
     if (ei->type == BTRFS_FILE_EXTENT_INLINE)
@@ -153,9 +139,9 @@ static void parse_file_extent_item(uint8_t *bp, uint32_t hlen,
     if (hlen != sizeof(*ei))
         die("%s: Regular extent's header not 53 bytes (%u) long?!?\n", filename, hlen);
 
-    disk_num_bytes = get_u64(&ei->disk_num_bytes);
-    disk_bytenr = get_u64(&ei->disk_bytenr);
-    num_bytes = get_u64(&ei->num_bytes);
+    disk_num_bytes = get_unaligned_le64(&ei->disk_num_bytes);
+    disk_bytenr = get_unaligned_le64(&ei->disk_bytenr);
+    num_bytes = get_unaligned_le64(&ei->num_bytes);
 
     if (is_hole(disk_bytenr))
         return;
@@ -212,10 +198,13 @@ again:
     for (; nr_items > 0; nr_items--, bp += hlen)
     {
         head = (struct btrfs_ioctl_search_header*)bp;
-        hlen = get_u32(&head->len);
+        hlen = get_unaligned_32(&head->len);
         DPRINTF("{ transid=%lu objectid=%lu offset=%lu type=%u len=%u }\n",
-                get_u64(&head->transid), get_u64(&head->objectid), get_u64(&head->offset),
-                get_u32(&head->type), hlen);
+		get_unaligned_64(&head->transid),
+		get_unaligned_64(&head->objectid),
+		get_unaligned_64(&head->offset),
+		get_unaligned_32(&head->type),
+		hlen);
         bp += sizeof(*head);
 
         parse_file_extent_item(bp, hlen, ws, filename);
@@ -228,7 +217,7 @@ again:
     if (sv2_args.key.nr_items > 512)
     {
         sv2_args.key.nr_items = -1;
-        sv2_args.key.min_offset = get_u64(&head->offset) + 1;
+        sv2_args.key.min_offset = get_unaligned_64(&head->offset) + 1;
         goto again;
     }
 }
